@@ -21,7 +21,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 # ===============================================================================
 """
-from pysol_httpclient.Http.HttpClient import HttpClient
+from pysolhttpclient.Http.HttpClient import HttpClient
 
 
 class HttpRequest(object):

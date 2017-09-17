@@ -27,14 +27,14 @@ import logging
 import unittest
 import urllib
 
-from pysol_base.FileUtility import FileUtility
-from pysol_base.SolBase import SolBase
+from pysolbase.FileUtility import FileUtility
+from pysolbase.SolBase import SolBase
 
-from pysol_httpclient.Http.HttpClient import HttpClient
+from pysolhttpclient.Http.HttpClient import HttpClient
 
-from pysol_httpclient.Http.HttpRequest import HttpRequest
-from pysol_httpclient.Http.HttpResponse import HttpResponse
-from pysol_httpclient.HttpMock.HttpMock import HttpMock
+from pysolhttpclient.Http.HttpRequest import HttpRequest
+from pysolhttpclient.Http.HttpResponse import HttpResponse
+from pysolhttpclient.HttpMock.HttpMock import HttpMock
 
 SolBase.voodoo_init()
 logger = logging.getLogger(__name__)

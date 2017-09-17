@@ -1,11 +1,11 @@
-pysol_httpclient
+pysolhttpclient
 ============
 
 Welcome to pysol
 
 Copyright (C) 2013/2017 Laurent Labatut / Laurent Champagnac
 
-pysol_httpclient is a set an HTTP client Apis
+pysolhttpclient is a set an HTTP client Apis
 
 They are gevent based
 They support urllib3 and geventhttpclient implementations

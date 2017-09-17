@@ -54,7 +54,7 @@ def requirement_read(req_file):
 # SETUP
 # ===========================
 
-p_name = "pysol_httpclient"
+p_name = "pysolhttpclient"
 p_author = "Laurent Champagnac"
 p_email = "champagnac.laurent@gmail.com"
 p_url = "https://knock.center"

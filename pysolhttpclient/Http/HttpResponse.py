@@ -21,7 +21,7 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 # ===============================================================================
 """
-from pysol_base.SolBase import SolBase
+from pysolbase.SolBase import SolBase
 
 
 class HttpResponse(object):

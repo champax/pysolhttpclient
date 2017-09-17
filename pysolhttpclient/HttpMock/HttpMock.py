@@ -32,7 +32,7 @@ import gevent
 from gevent.baseserver import _parse_address
 from gevent.event import Event
 from gevent.pywsgi import WSGIServer
-from pysol_base.SolBase import SolBase
+from pysolbase.SolBase import SolBase
 
 SolBase.voodoo_init()
 

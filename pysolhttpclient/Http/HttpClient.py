@@ -30,10 +30,10 @@ from gevent.timeout import Timeout
 from gevent.threading import Lock
 from geventhttpclient.client import PROTO_HTTPS, HTTPClient
 from geventhttpclient.url import URL
-from pysol_base.SolBase import SolBase
+from pysolbase.SolBase import SolBase
 from urllib3 import PoolManager, ProxyManager, Retry
 
-from pysol_httpclient.Http.HttpResponse import HttpResponse
+from pysolhttpclient.Http.HttpResponse import HttpResponse
 
 logger = logging.getLogger(__name__)
 
