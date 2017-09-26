@@ -50,6 +50,9 @@ class HttpResponse(object):
         self.buffer = None
 
         # Response headers
+        # It can be
+        # - str => str
+        # - str => list (if multiple headers with same name are found)
         self.headers = {
             'User-Agent': 'unittest',
         }

@@ -22,7 +22,6 @@
 # ===============================================================================
 """
 
-
 import logging
 import unittest
 import urllib
@@ -31,7 +30,6 @@ from pysolbase.FileUtility import FileUtility
 from pysolbase.SolBase import SolBase
 
 from pysolhttpclient.Http.HttpClient import HttpClient
-
 from pysolhttpclient.Http.HttpRequest import HttpRequest
 from pysolhttpclient.Http.HttpResponse import HttpResponse
 from pysolhttpclient.HttpMock.HttpMock import HttpMock
@@ -83,6 +81,31 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
             logger.warn("h set, stopping, not normal")
             self.h.stop()
             self.h = None
+
+    def test_add_headers(self):
+        """
+        Test
+        """
+
+        d = dict()
+
+        # First one
+        HttpClient._add_header(d, "toto", "toto_v1")
+        self.assertIsInstance(d["toto"], str)
+
+        # Switch to list
+        self.assertEqual(d["toto"], "toto_v1")
+        HttpClient._add_header(d, "toto", "toto_v2")
+        self.assertIsInstance(d["toto"], list)
+        self.assertIn("toto_v1", d["toto"])
+        self.assertIn("toto_v2", d["toto"])
+
+        # Add a new one
+        HttpClient._add_header(d, "toto", "toto_v3")
+        self.assertIsInstance(d["toto"], list)
+        self.assertIn("toto_v1", d["toto"])
+        self.assertIn("toto_v2", d["toto"])
+        self.assertIn("toto_v3", d["toto"])
 
     def test_get_basic_gevent(self):
         """

@@ -26,8 +26,8 @@ import logging
 
 import gevent
 import urllib3
-from gevent.timeout import Timeout
 from gevent.threading import Lock
+from gevent.timeout import Timeout
 from geventhttpclient.client import PROTO_HTTPS, HTTPClient
 from geventhttpclient.url import URL
 from pysolbase.SolBase import SolBase
@@ -250,6 +250,33 @@ class HttpClient(object):
             raise
 
     # ====================================
+    # MISC
+    # ====================================
+
+    @classmethod
+    def _add_header(cls, d, k, v):
+        """
+        Add header k,v to d
+        :param d: dict
+        :type d: dict
+        :param k: header key
+        :param k: str
+        :param v: header value
+        :param v: str
+        """
+
+        if k not in d:
+            d[k] = v
+        else:
+            # Already present
+            if isinstance(d[k], list):
+                # Just append
+                d[k].append(v)
+            else:
+                # Build a list, existing value and new value
+                d[k] = [d[k], v]
+
+    # ====================================
     # GEVENT
     # ====================================
 
@@ -319,7 +346,7 @@ class HttpClient(object):
 
         # noinspection PyProtectedMember
         for k, v in response._headers_index.iteritems():
-            http_response.headers[k] = v
+            HttpClient._add_header(http_response.headers, k, v)
 
         response.should_close()
 
@@ -387,7 +414,7 @@ class HttpClient(object):
         # Ok
         http_response.status_code = r.status
         for k, v in r.headers.iteritems():
-            http_response.headers[k] = v
+            HttpClient._add_header(http_response.headers, k, v)
         http_response.buffer = r.data
         http_response.content_length = len(http_response.buffer)
 
