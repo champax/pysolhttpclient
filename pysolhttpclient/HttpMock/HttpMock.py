@@ -208,6 +208,18 @@ class HttpMock(object):
 
         return self._get_param_internal(environ["QUERY_STRING"])
 
+    # noinspection PyMethodMayBeStatic
+    def _get_method(self, environ):
+        """
+        Get http method
+        :param environ: dict
+        :type environ: dict
+        :return str
+        :rtype str
+        """
+
+        return environ["REQUEST_METHOD"]
+
     def _get_param_from_post_data(self, environ):
         """
         Extract params from post data (treat them as a normal query string)
@@ -305,8 +317,10 @@ class HttpMock(object):
             # Sometimes PATH_INFO come with full uri (urllib3) (?!)
             # http://127.0.0.1:7900/unittest
             if pi.endswith("/unittest"):
+                logger.debug("call _on_unit_test")
                 return self._on_unit_test(environ, start_response)
             else:
+                logger.debug("call _on_invalid")
                 return self._on_invalid(start_response)
         except Exception as e:
             logger.warn("Ex=%s", SolBase.extostr(e))
@@ -316,6 +330,7 @@ class HttpMock(object):
             start_response(status, headers)
             return [body]
         finally:
+            logger.debug("exit")
             self._lifecycle_log_status()
 
     # ==============================
@@ -355,14 +370,28 @@ class HttpMock(object):
         """
 
         # Param
+        logger.debug("_get_param_from_qs")
         from_qs = self._get_param_from_qs(environ)
+        logger.debug("_get_param_from_post_data")
         from_post = self._get_param_from_post_data(environ)
+        logger.debug("_get_method")
+        from_method = self._get_method(environ)
 
         # Debug
+        logger.debug("reply set")
         status = "200 OK"
-        body = "OK" + "\n"
-        body += "from_qs=" + str(from_qs) + " -EOL\n"
-        body += "from_post=" + str(from_post) + " -EOL\n"
-        headers = [('Content-Type', 'text/txt')]
-        start_response(status, headers)
+        if from_method == "HEAD":
+            # No body
+            body = ""
+            headers = [('Content-Type', 'text/txt')]
+            start_response(status, headers)
+            logger.debug("reply send")
+        else:
+            body = "OK" + "\n"
+            body += "from_qs=" + str(from_qs) + " -EOL\n"
+            body += "from_post=" + str(from_post) + " -EOL\n"
+            body += "from_method=" + from_method + "\n"
+            headers = [('Content-Type', 'text/txt')]
+            start_response(status, headers)
+            logger.debug("reply send")
         return [body]

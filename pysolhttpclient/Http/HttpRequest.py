@@ -34,6 +34,11 @@ class HttpRequest(object):
         Const
         """
 
+        # Method
+        # If none, auto-detect (post_data : POST, GET otherwise)
+        # If set : GET|HEAD|OPTIONS|TRACE, or POST|PUT|PATCH|DELETE (with post_data)
+        self.method = None
+
         # Uri
         self.uri = None
 

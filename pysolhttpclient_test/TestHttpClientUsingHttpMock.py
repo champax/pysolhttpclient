@@ -273,9 +273,12 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
         # Client
         hc = HttpClient()
 
-        # SolBase.logging_init(log_level="DEBUG", force_reset=True)
+        # ---------------------
+        # AUTO-DETECT
+        # ---------------------
 
-        # Http get
+        # AUTO-DETECT : Http get
+        logger.info("AUTO: GET")
         hreq = HttpRequest()
         hreq.force_http_implementation = force_implementation
         if proxy:
@@ -286,9 +289,10 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
         logger.info("Got=%s", hresp)
         self.assertEqual(hresp.status_code, 200)
         self.assertEqual(hresp.buffer,
-                         "OK\nfrom_qs={'p1': 'v1 2.3/4'} -EOL\nfrom_post={} -EOL\n")
+                         "OK\nfrom_qs={'p1': 'v1 2.3/4'} -EOL\nfrom_post={} -EOL\nfrom_method=GET\n")
 
-        # Http post
+        # AUTO-DETECT : Http post
+        logger.info("AUTO: POST")
         hreq = HttpRequest()
         hreq.force_http_implementation = force_implementation
         if proxy:
@@ -300,7 +304,59 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
         logger.info("Got=%s", hresp)
         self.assertEqual(hresp.status_code, 200)
         self.assertEqual(hresp.buffer,
-                         "OK\nfrom_qs={} -EOL\nfrom_post={'p1': 'v1 2.3/4'} -EOL\n")
+                         "OK\nfrom_qs={} -EOL\nfrom_post={'p1': 'v1 2.3/4'} -EOL\nfrom_method=POST\n")
+
+        # ---------------------
+        # MANUAL
+        # ---------------------
+
+        # No post
+        for cur_method in ["GET", "HEAD", "OPTIONS", "TRACE"]:
+            # Gevent do not support some, skip
+            if force_implementation == HttpClient.HTTP_IMPL_GEVENT and cur_method in ["PATCH", "OPTIONS", "TRACE"]:
+                continue
+            logger.info("MANUAL : %s", cur_method)
+            hreq = HttpRequest()
+            hreq.force_http_implementation = force_implementation
+            if proxy:
+                hreq.http_proxy_host = "127.0.0.1"
+                hreq.http_proxy_port = 1180
+            hreq.uri = "http://127.0.0.1:7900/unittest?" + v
+            hreq.method = cur_method
+            hresp = hc.go_http(hreq)
+            logger.info("Got=%s", hresp)
+            self.assertEqual(hresp.status_code, 200)
+            if cur_method == "HEAD":
+                # No body in reply
+                self.assertEqual(hresp.buffer, "")
+            else:
+
+                self.assertEqual(hresp.buffer,
+                                 "OK\nfrom_qs={'p1': 'v1 2.3/4'} -EOL\nfrom_post={} -EOL\nfrom_method=" + cur_method + "\n")
+
+        # Post
+        for cur_method in ["POST", "PUT", "PATCH", "DELETE"]:
+            # Gevent do not support some, skip
+            if force_implementation == HttpClient.HTTP_IMPL_GEVENT and cur_method in ["PATCH", "OPTIONS", "TRACE"]:
+                continue
+            logger.info("MANUAL : %s", cur_method)
+            hreq = HttpRequest()
+            hreq.force_http_implementation = force_implementation
+            if proxy:
+                hreq.http_proxy_host = "127.0.0.1"
+                hreq.http_proxy_port = 1180
+            hreq.uri = "http://127.0.0.1:7900/unittest"
+            hreq.method = cur_method
+            hreq.post_data = v
+            hresp = hc.go_http(hreq)
+            logger.info("Got=%s", hresp)
+            self.assertEqual(hresp.status_code, 200)
+            self.assertEqual(hresp.buffer,
+                             "OK\nfrom_qs={} -EOL\nfrom_post={'p1': 'v1 2.3/4'} -EOL\nfrom_method=" + cur_method + "\n")
+
+        # ---------------------
+        # INVALID
+        # ---------------------
 
         # Http get toward invalid
         hreq = HttpRequest()

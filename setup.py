@@ -58,7 +58,7 @@ p_name = "pysolhttpclient"
 p_author = "Laurent Champagnac"
 p_email = "champagnac.laurent@gmail.com"
 p_url = "https://knock.center"
-p_version = "1.0.2"
+p_version = "1.0.3"
 
 setup(
 

@@ -310,15 +310,49 @@ class HttpClient(object):
         # Fire
         ms_start = SolBase.mscurrent()
         logger.debug("Http now")
-        if http_request.post_data:
-            # Post
-            response = http.post(url.request_uri,
-                                 body=http_request.post_data,
-                                 headers=http_request.headers)
+        if not http_request.method:
+            # ----------------
+            # Auto-detect
+            # ----------------
+            if http_request.post_data:
+                # Post
+                response = http.post(url.request_uri,
+                                     body=http_request.post_data,
+                                     headers=http_request.headers)
+            else:
+                # Get
+                response = http.get(url.request_uri,
+                                    headers=http_request.headers)
         else:
-            # Get
-            response = http.get(url.request_uri,
-                                headers=http_request.headers)
+            # ----------------
+            # Use input
+            # ----------------
+            if http_request.method == "GET":
+                response = http.get(url.request_uri,
+                                    headers=http_request.headers)
+            elif http_request.method == "DELETE":
+                response = http.delete(url.request_uri,
+                                       body=http_request.post_data,
+                                       headers=http_request.headers)
+            elif http_request.method == "HEAD":
+                response = http.head(url.request_uri,
+                                     headers=http_request.headers)
+            elif http_request.method == "PUT":
+                response = http.put(url.request_uri,
+                                    body=http_request.post_data,
+                                    headers=http_request.headers)
+            elif http_request.method == "POST":
+                response = http.post(url.request_uri,
+                                     body=http_request.post_data,
+                                     headers=http_request.headers)
+            elif http_request.method == "PATCH":
+                raise Exception("Unsupported gevent method={0}".format(http_request.method))
+            elif http_request.method == "OPTIONS":
+                raise Exception("Unsupported gevent method={0}".format(http_request.method))
+            elif http_request.method == "TRACE":
+                raise Exception("Unsupported gevent method={0}".format(http_request.method))
+            else:
+                raise Exception("Invalid gevent method={0}".format(http_request.method))
 
         logger.debug("Http done, ms=%s", SolBase.msdiff(ms_start))
         SolBase.sleep(0)
@@ -392,23 +426,50 @@ class HttpClient(object):
 
         # Fire
         logger.debug("urlopen")
-        if http_request.post_data:
-            r = conn.urlopen(
-                method='POST',
-                url=http_request.uri,
-                body=http_request.post_data,
-                headers=http_request.headers,
-                redirect=False,
-                retries=retries,
-            )
+        if not http_request.method:
+            # ----------------
+            # Auto-detect
+            # ----------------
+            if http_request.post_data:
+                r = conn.urlopen(
+                    method='POST',
+                    url=http_request.uri,
+                    body=http_request.post_data,
+                    headers=http_request.headers,
+                    redirect=False,
+                    retries=retries,
+                )
+            else:
+                r = conn.urlopen(
+                    method='GET',
+                    url=http_request.uri,
+                    headers=http_request.headers,
+                    redirect=False,
+                    retries=retries,
+                )
         else:
-            r = conn.urlopen(
-                method='GET',
-                url=http_request.uri,
-                headers=http_request.headers,
-                redirect=False,
-                retries=retries,
-            )
+            # ----------------
+            # Use input
+            # ----------------
+            if http_request.method in ["GET", "HEAD", "OPTIONS", "TRACE"]:
+                r = conn.urlopen(
+                    method=http_request.method,
+                    url=http_request.uri,
+                    headers=http_request.headers,
+                    redirect=False,
+                    retries=retries,
+                )
+            elif http_request.method in ["POST", "PUT", "PATCH", "DELETE"]:
+                r = conn.urlopen(
+                    method=http_request.method,
+                    url=http_request.uri,
+                    body=http_request.post_data,
+                    headers=http_request.headers,
+                    redirect=False,
+                    retries=retries,
+                )
+            else:
+                raise Exception("Invalid urllib3 method={0}".format(http_request.method))
         logger.debug("urlopen ok")
 
         # Ok
