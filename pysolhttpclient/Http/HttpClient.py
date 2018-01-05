@@ -195,7 +195,7 @@ class HttpClient(object):
 
             # Fire
             gevent.with_timeout(
-                http_request.general_timeout_ms / 1000,
+                float(http_request.general_timeout_ms) / 1000.0,
                 self._go_http_internal,
                 http_request, http_response)
         except Timeout:
