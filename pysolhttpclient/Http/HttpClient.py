@@ -101,6 +101,7 @@ class HttpClient(object):
 
         # Check
         if key in self._gevent_pool:
+            SolBase.sleep(0)
             return self._gevent_pool[key]
 
         # Allocate (in lock)
@@ -126,6 +127,7 @@ class HttpClient(object):
 
             self._gevent_pool[key] = http
             logger.info("Started new pool for key=%s", key)
+            SolBase.sleep(0)
             return http
 
     # ====================================
@@ -142,6 +144,7 @@ class HttpClient(object):
         """
 
         if not http_request.http_proxy_host:
+            SolBase.sleep(0)
             return self._u3_basic_pool
 
         # Compute key
@@ -152,6 +155,7 @@ class HttpClient(object):
 
         # Check
         if key in self._u3_proxy_pool:
+            SolBase.sleep(0)
             return self._u3_proxy_pool[key]
 
         # Allocate (in lock)
@@ -172,6 +176,7 @@ class HttpClient(object):
             p = ProxyManager(num_pools=1024, maxsize=1024, proxy_url=proxy_url)
             self._u3_proxy_pool[key] = p
             logger.info("Started new pool for key=%s", key)
+            SolBase.sleep(0)
             return p
 
     # ====================================
@@ -199,10 +204,13 @@ class HttpClient(object):
                 general_timeout_sec,
                 self._go_http_internal,
                 http_request, http_response)
+            SolBase.sleep(0)
         except Timeout:
             # Failed
             http_response.exception = Exception("Timeout while processing, general_timeout_sec={0}".format(general_timeout_sec))
         finally:
+            # Switch
+            SolBase.sleep(0)
             # Assign ms
             http_response.elapsed_ms = SolBase.msdiff(ms)
             # Log it
@@ -230,6 +238,7 @@ class HttpClient(object):
 
             # Uri
             url = URL(http_request.uri)
+            SolBase.sleep(0)
 
             # If proxy and https => urllib3
             if http_request.http_proxy_host and url.scheme == PROTO_HTTPS:
@@ -243,8 +252,10 @@ class HttpClient(object):
             # Fire
             if impl == HttpClient.HTTP_IMPL_GEVENT:
                 self._go_gevent(http_request, http_response)
+                SolBase.sleep(0)
             elif impl == HttpClient.HTTP_IMPL_URLLIB3:
                 self._go_urllib3(http_request, http_response)
+                SolBase.sleep(0)
             else:
                 raise Exception("Invalid force_http_implementation")
         except Exception as e:
@@ -297,6 +308,7 @@ class HttpClient(object):
 
         # Uri
         url = URL(http_request.uri)
+        SolBase.sleep(0)
 
         # Patch for path attribute error
         try:
@@ -410,6 +422,7 @@ class HttpClient(object):
         logger.debug("From pool")
         cur_pool = self.urllib3_from_pool(http_request)
         logger.debug("From pool ok")
+        SolBase.sleep(0)
 
         # From pool
         logger.debug("From pool2")
@@ -420,12 +433,14 @@ class HttpClient(object):
             # Get connection from basic pool
             conn = cur_pool.connection_from_url(http_request.uri)
         logger.debug("From pool2 ok")
+        SolBase.sleep(0)
 
         # Retries
         retries = Retry(total=0,
                         connect=0,
                         read=0,
                         redirect=0)
+        SolBase.sleep(0)
 
         # Fire
         logger.debug("urlopen")
@@ -474,6 +489,7 @@ class HttpClient(object):
             else:
                 raise Exception("Invalid urllib3 method={0}".format(http_request.method))
         logger.debug("urlopen ok")
+        SolBase.sleep(0)
 
         # Ok
         http_response.status_code = r.status
@@ -483,4 +499,4 @@ class HttpClient(object):
         http_response.content_length = len(http_response.buffer)
 
         # Over
-        pass
+        SolBase.sleep(0)
