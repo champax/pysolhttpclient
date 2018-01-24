@@ -189,21 +189,24 @@ class HttpClient(object):
 
         ms = SolBase.mscurrent()
         http_response = HttpResponse()
+        general_timeout_sec = float(http_request.general_timeout_ms) / 1000.0
         try:
             # Assign request
             http_response.http_request = http_request
 
             # Fire
             gevent.with_timeout(
-                float(http_request.general_timeout_ms) / 1000.0,
+                general_timeout_sec,
                 self._go_http_internal,
                 http_request, http_response)
         except Timeout:
             # Failed
-            http_response.exception = Exception("Timeout while processing")
+            http_response.exception = Exception("Timeout while processing, general_timeout_sec={0}".format(general_timeout_sec))
         finally:
             # Assign ms
             http_response.elapsed_ms = SolBase.msdiff(ms)
+            # Log it
+            logger.info("Http call over, general_timeout_sec=%.2f, resp=%s, req=%s", general_timeout_sec, http_response, http_request)
 
         # Return
         return http_response
