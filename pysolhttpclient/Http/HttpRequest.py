@@ -87,8 +87,9 @@ class HttpRequest(object):
         :rtype string
         """
 
-        return "hreq:uri={0}*pd={1}*ka={2}*cc={3}*httpsi={4}*prox={5}*socks={6}*force={7}*h={8}*to.c/n/g={9}/{10}/{11}".format(
+        return "hreq:uri={0}*m={1}*pd={2}*ka={3}*cc={4}*httpsi={5}*prox={6}*socks={7}*force={8}*h={9}*to.c/n/g={10}/{11}/{12}".format(
             self.uri,
+            self.method,
             len(self.post_data) if self.post_data else "None",
             self.keep_alive,
             self.http_concurrency,
