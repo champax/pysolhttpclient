@@ -84,7 +84,7 @@ class HttpRequest(object):
         """
         To string override
         :return: A string
-        :rtype string
+        :rtype str
         """
 
         return "hreq:uri={0}*m={1}*pd={2}*ka={3}*cc={4}*httpsi={5}*prox={6}*socks={7}*force={8}*h={9}*to.c/n/g={10}/{11}/{12}".format(

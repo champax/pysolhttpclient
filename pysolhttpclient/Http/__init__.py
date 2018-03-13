@@ -21,3 +21,14 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 # ===============================================================================
 """
+
+# WE MUST MONKEY PATCH ASAP HERE FOR PY3
+from pysolbase.SolBase import SolBase
+from pysolhttpclient import PY3
+
+SolBase.voodoo_init()
+
+# We disable python 3 resources warnings (http keepalive do not close sockets, which is intended...)
+if PY3:
+    import warnings
+    warnings.simplefilter("ignore", ResourceWarning)

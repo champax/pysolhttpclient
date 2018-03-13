@@ -74,8 +74,8 @@ class HttpClient(object):
     def gevent_from_pool(self, url, http_request):
         """
         Get a gevent client from url and request
-        :param url: URL
-        :type url: URL
+        :param url: geventhttpclient.url.URL
+        :type url: geventhttpclient.url.URL
         :param http_request: HttpRequest
         :type http_request: HttpRequest
         :return HTTPClient
@@ -139,8 +139,8 @@ class HttpClient(object):
         Get a u3 pool from url and request
         :param http_request: HttpRequest
         :type http_request: HttpRequest
-        :return Object
-        :rtype Object
+        :return urllib3.poolmanager.ProxyManager
+        :rtype urllib3.poolmanager.ProxyManager
         """
 
         if not http_request.http_proxy_host:
@@ -259,7 +259,7 @@ class HttpClient(object):
             else:
                 raise Exception("Invalid force_http_implementation")
         except Exception as e:
-            logger.warn("Ex=%s", SolBase.extostr(e))
+            logger.warning("Ex=%s", SolBase.extostr(e))
             http_response.exception = e
             raise
 
@@ -394,7 +394,7 @@ class HttpClient(object):
                 http_response.content_length = 0
 
         # noinspection PyProtectedMember
-        for k, v in response._headers_index.iteritems():
+        for k, v in response._headers_index.items():
             HttpClient._add_header(http_response.headers, k, v)
 
         response.should_close()
@@ -493,7 +493,7 @@ class HttpClient(object):
 
         # Ok
         http_response.status_code = r.status
-        for k, v in r.headers.iteritems():
+        for k, v in r.headers.items():
             HttpClient._add_header(http_response.headers, k, v)
         http_response.buffer = r.data
         http_response.content_length = len(http_response.buffer)
