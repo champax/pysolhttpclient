@@ -208,6 +208,9 @@ class HttpClient(object):
         except Timeout:
             # Failed
             http_response.exception = Exception("Timeout while processing, general_timeout_sec={0}".format(general_timeout_sec))
+        except Exception as e:
+            # Failed
+            http_response.exception = e
         finally:
             # Switch
             SolBase.sleep(0)
