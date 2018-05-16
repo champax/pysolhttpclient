@@ -227,8 +227,6 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
 
             self.assertIn(hresp.status_code, [200, 302, 301])
 
-            self.assertEqual(hresp.headers["User-Agent"], "unittest")
-
             SolBase.sleep(250)
 
     def test_httpmock_noproxy_gevent(self):
