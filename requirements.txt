@@ -1,6 +1,6 @@
 # gevent stack
 greenlet
-gevent
+gevent == 1.2.2
 
 # date
 pytz

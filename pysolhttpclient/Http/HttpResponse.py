@@ -46,16 +46,14 @@ class HttpResponse(object):
         # Class used for internal http processing
         self.http_implementation = None
 
-        # Response buffer
+        # Response buffer (binary / bytes)
         self.buffer = None
 
         # Response headers
         # It can be
-        # - str => str
-        # - str => list (if multiple headers with same name are found)
-        self.headers = {
-            'User-Agent': 'unittest',
-        }
+        # - bytes => bytes
+        # - bytes => list (if multiple headers with same name are found)
+        self.headers = {}
 
         # Status code (integer)
         self.status_code = 0
@@ -67,7 +65,7 @@ class HttpResponse(object):
         """
         To string override
         :return: A string
-        :rtype string
+        :rtype str
         """
 
         return "hresp:st={0}*cl={1}*impl={2}*ms={3}*h={4}*req.uri={5}*req.h={6}*ex={7}".format(

@@ -22,9 +22,7 @@
 # ===============================================================================
 """
 
-
 import logging
-import urlparse
 from threading import Lock
 
 import gevent
@@ -34,7 +32,14 @@ from gevent.event import Event
 from gevent.pywsgi import WSGIServer
 from pysolbase.SolBase import SolBase
 
-SolBase.voodoo_init()
+from pysolhttpclient import PY2
+
+if PY2:
+    # noinspection PyUnresolvedReferences
+    import urlparse
+else:
+    # noinspection PyUnresolvedReferences
+    from urllib import parse
 
 logger = logging.getLogger(__name__)
 lifecyclelogger = logging.getLogger("LifeCycle")
@@ -85,7 +90,7 @@ class HttpMock(object):
 
                 # Check
                 if self._is_running:
-                    logger.warn("Already running, doing nothing")
+                    logger.warning("Already running, doing nothing")
 
                 # Start
                 self._server_greenlet = gevent.spawn(self._server_forever)
@@ -214,8 +219,8 @@ class HttpMock(object):
         Get http method
         :param environ: dict
         :type environ: dict
-        :return str
-        :rtype str
+        :return bytes
+        :rtype bytes
         """
 
         return environ["REQUEST_METHOD"]
@@ -237,8 +242,8 @@ class HttpMock(object):
         """
         Get param from a buffer (query string or post data)
         Assume post data is urlencoded.
-        :param buf: str
-        :type buf: str
+        :param buf: bytes
+        :type buf: bytes
         :return dict
         :rtype dict
         """
@@ -250,8 +255,13 @@ class HttpMock(object):
 
         # Decode, browse and hash (got a list of tuple (param, value))
         d = dict()
-        for tu in urlparse.parse_qsl(buf, keep_blank_values=True, strict_parsing=True):
-            d[tu[0]] = tu[1]
+        if PY2:
+            for tu in urlparse.parse_qsl(buf, keep_blank_values=True, strict_parsing=True):
+                d[tu[0]] = tu[1]
+        else:
+            for tu in parse.parse_qsl(buf, keep_blank_values=True, strict_parsing=True):
+                d[tu[0]] = tu[1]
+
         return d
 
     # noinspection PyMethodMayBeStatic
@@ -260,12 +270,12 @@ class HttpMock(object):
         Get post data, raw, not decoded. Return an empty string is no post data.
         :param environ: dict
         :type environ: dict
-        :return str
-        :rtype str
+        :return bytes
+        :rtype bytes
         """
         wi = environ["wsgi.input"]
         if not wi:
-            return ""
+            return b""
         else:
             return wi.read()
 
@@ -274,8 +284,8 @@ class HttpMock(object):
         Get post data, raw, not decoded. Return an empty string is no post data.
         :param environ: dict
         :type environ: dict
-        :return str
-        :rtype str
+        :return bytes
+        :rtype bytes
         """
         wi = self._get_post_data_raw(environ)
         if wi:
@@ -307,7 +317,7 @@ class HttpMock(object):
             logger.info("Request start now")
 
             # Log
-            for k, v in environ.iteritems():
+            for k, v in environ.items():
                 logger.debug("Env: %s=%s", k, v)
 
             # Switch
@@ -323,12 +333,12 @@ class HttpMock(object):
                 logger.debug("call _on_invalid")
                 return self._on_invalid(start_response)
         except Exception as e:
-            logger.warn("Ex=%s", SolBase.extostr(e))
+            logger.warning("Ex=%s", SolBase.extostr(e))
             status = "500 Internal Server Error"
             body = status
             headers = [('Content-Type', 'text/plain')]
             start_response(status, headers)
-            return [body]
+            return [SolBase.unicode_to_binary(body, "utf-8")]
         finally:
             logger.debug("exit")
             self._lifecycle_log_status()
@@ -352,7 +362,7 @@ class HttpMock(object):
         body = status
         headers = [('Content-Type', 'text/txt')]
         start_response(status, headers)
-        return [body]
+        return [SolBase.unicode_to_binary(body, "utf-8")]
 
     # ==============================
     # REQUEST : UNITTEST
@@ -394,4 +404,4 @@ class HttpMock(object):
             headers = [('Content-Type', 'text/txt')]
             start_response(status, headers)
             logger.debug("reply send")
-        return [body]
+        return [SolBase.unicode_to_binary(body, "utf-8")]
