@@ -216,8 +216,6 @@ class HttpClient(object):
             SolBase.sleep(0)
             # Assign ms
             http_response.elapsed_ms = SolBase.msdiff(ms)
-            # Log it
-            logger.info("Http call over, general_timeout_sec=%.2f, resp=%s, req=%s", general_timeout_sec, http_response, http_request)
 
         # Return
         return http_response
