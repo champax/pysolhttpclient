@@ -26,9 +26,11 @@
 from pysolbase.SolBase import SolBase
 from pysolhttpclient import PY3
 
-SolBase.voodoo_init()
+SolBase.voodoo_init(init_logging=False)
 
 # We disable python 3 resources warnings (http keepalive do not close sockets, which is intended...)
 if PY3:
     import warnings
+
+    # noinspection PyUnresolvedReferences
     warnings.simplefilter("ignore", ResourceWarning)

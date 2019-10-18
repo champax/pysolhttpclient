@@ -6,8 +6,10 @@ gevent
 pytz
 
 # pysol
-pysolbase
+pysolbase>=1.1.3
 
 # http
 geventhttpclient
-urllib3
+
+# Request currently requires old urllib3
+urllib3<1.25
