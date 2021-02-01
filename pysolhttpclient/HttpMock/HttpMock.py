@@ -31,15 +31,7 @@ from gevent.baseserver import _parse_address
 from gevent.event import Event
 from gevent.pywsgi import WSGIServer
 from pysolbase.SolBase import SolBase
-
-from pysolhttpclient import PY2
-
-if PY2:
-    # noinspection PyUnresolvedReferences
-    import urlparse
-else:
-    # noinspection PyUnresolvedReferences
-    from urllib import parse
+from urllib import parse
 
 logger = logging.getLogger(__name__)
 lifecyclelogger = logging.getLogger("LifeCycle")
@@ -255,12 +247,8 @@ class HttpMock(object):
 
         # Decode, browse and hash (got a list of tuple (param, value))
         d = dict()
-        if PY2:
-            for tu in urlparse.parse_qsl(buf, keep_blank_values=True, strict_parsing=True):
-                d[tu[0]] = tu[1]
-        else:
-            for tu in parse.parse_qsl(buf, keep_blank_values=True, strict_parsing=True):
-                d[tu[0]] = tu[1]
+        for tu in parse.parse_qsl(buf, keep_blank_values=True, strict_parsing=True):
+            d[tu[0]] = tu[1]
 
         return d
 
