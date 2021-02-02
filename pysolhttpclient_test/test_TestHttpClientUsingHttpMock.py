@@ -24,21 +24,15 @@
 
 import logging
 import unittest
-import urllib
+from urllib import parse
 
 from pysolbase.FileUtility import FileUtility
 from pysolbase.SolBase import SolBase
 
-from pysolhttpclient import PY2, PY3
 from pysolhttpclient.Http.HttpClient import HttpClient
 from pysolhttpclient.Http.HttpRequest import HttpRequest
 from pysolhttpclient.Http.HttpResponse import HttpResponse
 from pysolhttpclient.HttpMock.HttpMock import HttpMock
-
-if PY2:
-    pass
-else:
-    from urllib import parse
 
 logger = logging.getLogger(__name__)
 
@@ -75,9 +69,11 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
         """
 
         self.h = None
-        if PY3:
-            import warnings
-            warnings.simplefilter("ignore", ResourceWarning)
+
+        import warnings
+        warnings.simplefilter("ignore", ResourceWarning)
+        from urllib3.exceptions import InsecureRequestWarning
+        warnings.simplefilter("ignore", InsecureRequestWarning)
 
     # noinspection PyPep8Naming
     def tearDown(self):
@@ -274,12 +270,7 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
         self.assertIsNotNone(self.h._server_greenlet)
 
         # Param
-        if PY2:
-            # noinspection PyUnresolvedReferences
-            v = urllib.urlencode({"p1": "v1 2.3/4"})
-        else:
-            # noinspection PyUnresolvedReferences
-            v = parse.urlencode({"p1": "v1 2.3/4"})
+        v = parse.urlencode({"p1": "v1 2.3/4"})
 
         # Client
         hc = HttpClient()
@@ -314,13 +305,10 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
         hresp = hc.go_http(hreq)
         logger.info("Got=%s", hresp)
         self.assertEqual(hresp.status_code, 200)
-        if PY2:
-            self.assertEqual(SolBase.binary_to_unicode(hresp.buffer, "utf-8"),
-                             "OK\nfrom_qs={} -EOL\nfrom_post={'p1': 'v1 2.3/4'} -EOL\nfrom_method=POST\n")
-        else:
-            # PY3 : urllib parse return binary, so we have binary in post...
-            self.assertEqual(SolBase.binary_to_unicode(hresp.buffer, "utf-8"),
-                             "OK\nfrom_qs={} -EOL\nfrom_post={b'p1': b'v1 2.3/4'} -EOL\nfrom_method=POST\n")
+
+        # PY3 : urllib parse return binary, so we have binary in post...
+        self.assertEqual(SolBase.binary_to_unicode(hresp.buffer, "utf-8"),
+                         "OK\nfrom_qs={} -EOL\nfrom_post={b'p1': b'v1 2.3/4'} -EOL\nfrom_method=POST\n")
 
         # ---------------------
         # MANUAL
@@ -367,13 +355,10 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
             hresp = hc.go_http(hreq)
             logger.info("Got=%s", hresp)
             self.assertEqual(hresp.status_code, 200)
-            if PY2:
-                self.assertEqual(SolBase.binary_to_unicode(hresp.buffer, "utf-8"),
-                                 "OK\nfrom_qs={} -EOL\nfrom_post={'p1': 'v1 2.3/4'} -EOL\nfrom_method=" + cur_method + "\n")
-            else:
-                # PY3 : urllib parse return binary, so we have binary in post...
-                self.assertEqual(SolBase.binary_to_unicode(hresp.buffer, "utf-8"),
-                                 "OK\nfrom_qs={} -EOL\nfrom_post={b'p1': b'v1 2.3/4'} -EOL\nfrom_method=" + cur_method + "\n")
+
+            # PY3 : urllib parse return binary, so we have binary in post...
+            self.assertEqual(SolBase.binary_to_unicode(hresp.buffer, "utf-8"),
+                             "OK\nfrom_qs={} -EOL\nfrom_post={b'p1': b'v1 2.3/4'} -EOL\nfrom_method=" + cur_method + "\n")
 
         # ---------------------
         # INVALID

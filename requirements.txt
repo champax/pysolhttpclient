@@ -6,7 +6,7 @@ gevent
 pytz
 
 # pysol
-pysolbase>=1.1.3
+pysolbase>=3.0.0
 
 # http
 geventhttpclient
