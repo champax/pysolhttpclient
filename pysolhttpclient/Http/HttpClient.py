@@ -62,7 +62,8 @@ class HttpClient(object):
 
         # urllib3
         # Force underlying fifo queue to 1024 via maxsize
-        self._u3_basic_pool = PoolManager(num_pools=1024, maxsize=1024)
+        self._u3_basic_pool_https_assert_off = PoolManager(num_pools=1024, maxsize=1024, assert_hostname=False)
+        self._u3_basic_pool_assert_on = PoolManager(num_pools=1024, maxsize=1024)
         self._u3_proxy_pool_max = 1024
         self._u3_proxy_locker = Lock()
         self._u3_proxy_pool = dict()
@@ -145,12 +146,18 @@ class HttpClient(object):
 
         if not http_request.http_proxy_host:
             SolBase.sleep(0)
-            return self._u3_basic_pool
+            if http_request.https_insecure and http_request.uri.startswith("https"):
+                return self._u3_basic_pool_https_assert_off
+            else:
+                return self._u3_basic_pool_assert_on
 
         # Compute key
-        key = "{0}#{1}#".format(
+        is_https = http_request.uri.startswith("https")
+        key = "{0}#{1}#{2}#{3}".format(
             http_request.http_proxy_host,
             http_request.http_proxy_port,
+            http_request.https_insecure,
+            is_https,
         )
 
         # Check
@@ -173,7 +180,10 @@ class HttpClient(object):
 
             # Ok, allocate
             # Force underlying fifo queue to 1024 via maxsize
-            p = ProxyManager(num_pools=1024, maxsize=1024, proxy_url=proxy_url)
+            if http_request.https_insecure and is_https:
+                p = ProxyManager(num_pools=1024, maxsize=1024, proxy_url=proxy_url, assert_hostname=False)
+            else:
+                p = ProxyManager(num_pools=1024, maxsize=1024, proxy_url=proxy_url)
             self._u3_proxy_pool[key] = p
             logger.info("Started new pool for key=%s", key)
             SolBase.sleep(0)
