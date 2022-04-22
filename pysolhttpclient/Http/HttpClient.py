@@ -23,6 +23,7 @@
 """
 
 import logging
+from ssl import CERT_NONE
 
 import gevent
 import urllib3
@@ -62,7 +63,7 @@ class HttpClient(object):
 
         # urllib3
         # Force underlying fifo queue to 1024 via maxsize
-        self._u3_basic_pool_https_assert_off = PoolManager(num_pools=1024, maxsize=1024, assert_hostname=False)
+        self._u3_basic_pool_https_assert_off = PoolManager(num_pools=1024, maxsize=1024, assert_hostname=False, cert_reqs=CERT_NONE)
         self._u3_basic_pool_assert_on = PoolManager(num_pools=1024, maxsize=1024)
         self._u3_proxy_pool_max = 1024
         self._u3_proxy_locker = Lock()
