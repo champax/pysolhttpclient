@@ -270,7 +270,7 @@ class HttpClient(object):
                 SolBase.sleep(0)
             else:
                 raise Exception("Invalid force_http_implementation")
-        except Exception as e:
+        except Exception:
             # This is not an underlying http exception, we raise without storing in http_response
             raise
 
