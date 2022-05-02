@@ -272,7 +272,6 @@ class HttpClient(object):
                 raise Exception("Invalid force_http_implementation")
         except Exception as e:
             # This is not an underlying http exception, we raise without storing in http_response
-            logger.warning("Ex=%s", SolBase.extostr(e))
             raise
 
     # ====================================
