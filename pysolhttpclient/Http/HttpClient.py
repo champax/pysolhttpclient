@@ -29,7 +29,7 @@ import gevent
 import urllib3
 from gevent.threading import Lock
 from gevent.timeout import Timeout
-from geventhttpclient.client import PROTO_HTTPS, HTTPClient
+from geventhttpclient.client import PROTO_HTTPS, HTTPClient, METHOD_GET
 from geventhttpclient.url import URL
 from pysolbase.SolBase import SolBase
 from urllib3 import PoolManager, ProxyManager, Retry
@@ -175,6 +175,7 @@ class HttpClient(object):
                 ))
 
             # Uri
+            # noinspection HttpUrlsUsage
             proxy_url = "http://{0}:{1}".format(
                 http_request.http_proxy_host,
                 http_request.http_proxy_port)
@@ -354,29 +355,49 @@ class HttpClient(object):
             # Use input
             # ----------------
             if http_request.method == "GET":
-                response = http.get(url.request_uri,
-                                    headers=http_request.headers)
+                # With post datas (optional)
+                # Get may be called with post buffer (RFC allowed)
+                if http_request.post_data:
+                    response = http.request(METHOD_GET,
+                                            url.request_uri,
+                                            body=http_request.post_data,
+                                            headers=http_request.headers)
+                else:
+                    response = http.get(url.request_uri,
+                                        headers=http_request.headers)
             elif http_request.method == "DELETE":
+                # With post datas
                 response = http.delete(url.request_uri,
                                        body=http_request.post_data,
                                        headers=http_request.headers)
             elif http_request.method == "HEAD":
+                # No post datas
                 response = http.head(url.request_uri,
                                      headers=http_request.headers)
+            elif http_request.method == "OPTIONS":
+                # No post datas
+                response = http.options(url.request_uri,
+                                        headers=http_request.headers)
             elif http_request.method == "PUT":
+                # With post datas
                 response = http.put(url.request_uri,
                                     body=http_request.post_data,
                                     headers=http_request.headers)
             elif http_request.method == "POST":
+                # With post datas
                 response = http.post(url.request_uri,
                                      body=http_request.post_data,
                                      headers=http_request.headers)
             elif http_request.method == "PATCH":
-                raise Exception("Unsupported gevent method={0}".format(http_request.method))
-            elif http_request.method == "OPTIONS":
-                raise Exception("Unsupported gevent method={0}".format(http_request.method))
+                # With post datas
+                response = http.patch(url.request_uri,
+                                      body=http_request.post_data,
+                                      headers=http_request.headers)
             elif http_request.method == "TRACE":
-                raise Exception("Unsupported gevent method={0}".format(http_request.method))
+                # With post datas
+                response = http.trace(url.request_uri,
+                                      body=http_request.post_data,
+                                      headers=http_request.headers)
             else:
                 raise Exception("Invalid gevent method={0}".format(http_request.method))
 
@@ -480,7 +501,8 @@ class HttpClient(object):
             # ----------------
             # Use input
             # ----------------
-            if http_request.method in ["GET", "HEAD", "OPTIONS", "TRACE"]:
+            if http_request.method in ["HEAD", "OPTIONS"]:
+                # No post datas
                 r = conn.urlopen(
                     method=http_request.method,
                     url=http_request.uri,
@@ -488,7 +510,8 @@ class HttpClient(object):
                     redirect=False,
                     retries=retries,
                 )
-            elif http_request.method in ["POST", "PUT", "PATCH", "DELETE"]:
+            elif http_request.method in ["GET", "TRACE", "POST", "PUT", "PATCH", "DELETE"]:
+                # GET can be called with post datas
                 r = conn.urlopen(
                     method=http_request.method,
                     url=http_request.uri,
