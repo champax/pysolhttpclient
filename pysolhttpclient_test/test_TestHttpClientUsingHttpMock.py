@@ -22,12 +22,14 @@
 # ===============================================================================
 """
 
+from pysolbase.SolBase import SolBase
+SolBase.voodoo_init()
 import logging
 import unittest
 from urllib import parse
 
 from pysolbase.FileUtility import FileUtility
-from pysolbase.SolBase import SolBase
+
 
 from pysolhttpclient.Http.HttpClient import HttpClient
 from pysolhttpclient.Http.HttpRequest import HttpRequest
@@ -317,9 +319,9 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
         # No post
         for cur_method in ["GET", "HEAD", "OPTIONS", "TRACE"]:
             # Gevent do not support some, skip
-            if force_implementation == HttpClient.HTTP_IMPL_GEVENT and cur_method in ["PATCH", "OPTIONS", "TRACE"]:
-                continue
-            logger.info("MANUAL : %s", cur_method)
+            # if force_implementation == HttpClient.HTTP_IMPL_GEVENT and cur_method in ["PATCH", "OPTIONS", "TRACE"]:
+            #    continue
+            logger.info("MANUAL, NO BODY : %s", cur_method)
             hreq = HttpRequest()
             hreq.force_http_implementation = force_implementation
             if proxy:
@@ -339,11 +341,11 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
                                  "OK\nfrom_qs={'p1': 'v1 2.3/4'} -EOL\nfrom_post={} -EOL\nfrom_method=" + cur_method + "\n")
 
         # Post
-        for cur_method in ["POST", "PUT", "PATCH", "DELETE"]:
+        for cur_method in ["GET", "TRACE", "POST", "PUT", "PATCH", "DELETE"]:
             # Gevent do not support some, skip
-            if force_implementation == HttpClient.HTTP_IMPL_GEVENT and cur_method in ["PATCH", "OPTIONS", "TRACE"]:
-                continue
-            logger.info("MANUAL : %s", cur_method)
+            # if force_implementation == HttpClient.HTTP_IMPL_GEVENT and cur_method in ["PATCH", "OPTIONS", "TRACE"]:
+            #    continue
+            logger.info("MANUAL, BODY : %s", cur_method)
             hreq = HttpRequest()
             hreq.force_http_implementation = force_implementation
             if proxy:
