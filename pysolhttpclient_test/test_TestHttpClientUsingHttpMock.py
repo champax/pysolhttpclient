@@ -189,10 +189,10 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
             hreq.force_http_implementation = force_implementation
 
             if https:
-                hreq.uri = "https://s.knock.center/static/k/k.notif.sample.png"
+                hreq.uri = "https://pypi.org"
             else:
                 # This will redirect https
-                hreq.uri = "http://s.knock.center/static/k/k.notif.sample.png"
+                hreq.uri = "http://pypi.org"
 
             # Http proxy
             if proxy:
