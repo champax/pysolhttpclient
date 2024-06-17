@@ -322,12 +322,6 @@ class HttpClient(object):
         url = URL(http_request.uri)
         SolBase.sleep(0)
 
-        # Patch for path attribute error
-        try:
-            _ = url.path
-        except AttributeError:
-            url.path = "/"
-
         # Get instance
         logger.debug("Get pool")
         http = self.gevent_from_pool(url, http_request)
