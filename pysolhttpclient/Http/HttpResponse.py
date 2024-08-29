@@ -23,6 +23,8 @@
 """
 from pysolbase.SolBase import SolBase
 
+from pysolhttpclient.Dict.csdict import CsDict
+
 
 class HttpResponse(object):
     """
@@ -53,7 +55,7 @@ class HttpResponse(object):
         # It can be
         # - bytes => bytes
         # - bytes => list (if multiple headers with same name are found)
-        self.headers = {}
+        self.headers = CsDict()
 
         # Status code (integer)
         self.status_code = 0

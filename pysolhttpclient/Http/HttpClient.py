@@ -291,6 +291,9 @@ class HttpClient(object):
         :param v: str
         """
 
+        if isinstance(k, str):
+            k = k.lower()
+
         if k not in d:
             d[k] = v
         else:
