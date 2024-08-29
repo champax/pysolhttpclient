@@ -21,16 +21,3 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 # ===============================================================================
 """
-
-# WE MUST MONKEY PATCH ASAP HERE FOR PY3
-from pysolbase.SolBase import SolBase
-
-SolBase.voodoo_init(init_logging=False)
-
-# noinspection PyPep8
-import warnings
-warnings.simplefilter("ignore", ResourceWarning)
-
-# noinspection PyPep8
-from urllib3.exceptions import InsecureRequestWarning
-warnings.simplefilter("ignore", InsecureRequestWarning)
