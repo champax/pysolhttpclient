@@ -80,6 +80,10 @@ class HttpRequest(object):
         # Force implementation
         self.force_http_implementation = HttpClient.HTTP_IMPL_AUTO
 
+        # Chunked, default False
+        # SUPPORTED only for urllib3 implementation
+        self.chunked = False
+
     def __str__(self):
         """
         To string override
