@@ -21,15 +21,18 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 # ===============================================================================
 """
+import os.path
+import subprocess
+from os.path import dirname, abspath
 
 from pysolbase.SolBase import SolBase
+
 SolBase.voodoo_init()
 import logging
 import unittest
 from urllib import parse
 
 from pysolbase.FileUtility import FileUtility
-
 
 from pysolhttpclient.Http.HttpClient import HttpClient
 from pysolhttpclient.Http.HttpRequest import HttpRequest
@@ -87,6 +90,50 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
             logger.warning("h set, stopping, not normal")
             self.h.stop()
             self.h = None
+
+    def test_mtls(self):
+        """
+        Test MTLS
+        """
+
+        cmd = "netstat -ltpn | grep 7943"
+        cmd_out = mycmd = subprocess.getoutput(cmd)
+        logger.info("GOT cmd_out=%s", cmd_out)
+        if ":7943" not in cmd_out:
+            logger.info("MTLS not detected, bypass")
+            return
+
+        logger.info("MTLS detected, checking")
+        current_dir = dirname(abspath(__file__)) + SolBase.get_pathseparator()
+        logger.info("Using current_dir=%s", current_dir)
+
+        mtls_dir = current_dir + "../z_mtls/"
+        logger.info("Using mtls_dir=%s", mtls_dir)
+        self.assertTrue(os.path.exists(mtls_dir))
+
+        s_client_crt = mtls_dir + "client.crt"
+        s_client_key = mtls_dir + "client.key"
+        s_client_pass = "zzz"
+        s_ca_crt = mtls_dir + "ca.crt"
+
+        self.assertTrue(os.path.isfile(s_client_crt))
+        self.assertTrue(os.path.isfile(s_client_key))
+        self.assertTrue(os.path.isfile(s_ca_crt))
+
+        # Lets go
+        mtls_uri = "https://127.0.0.1:7943"
+        hreq = HttpRequest()
+        hreq.method = "GET"
+        hreq.uri = mtls_uri
+        hreq.mtls_client_key = s_client_key
+        hreq.mtls_client_crt = s_client_crt
+        hreq.mtls_client_pwd = s_client_pass
+        hreq.mtls_ca_crt = s_ca_crt
+
+        hrep = HttpClient().go_http(http_request=hreq)
+        logger.info("GOT hrep=%s", hrep)
+        self.assertIsNone(hrep.exception)
+        self.assertEqual(hrep.status_code, 200)
 
     def test_add_headers(self):
         """

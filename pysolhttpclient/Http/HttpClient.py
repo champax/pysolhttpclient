@@ -39,7 +39,7 @@ from pysolhttpclient.Http.HttpResponse import HttpResponse
 logger = logging.getLogger(__name__)
 
 # Suppress warnings
-urllib3.disable_warnings()
+# urllib3.disable_warnings()
 
 
 class HttpClient(object):
@@ -145,7 +145,7 @@ class HttpClient(object):
         :rtype urllib3.poolmanager.ProxyManager
         """
 
-        if not http_request.http_proxy_host:
+        if not http_request.http_proxy_host and not http_request.mtls_enabled:
             SolBase.sleep(0)
             if http_request.https_insecure and http_request.uri.startswith("https"):
                 return self._u3_basic_pool_https_assert_off
@@ -154,12 +154,28 @@ class HttpClient(object):
 
         # Compute key
         is_https = http_request.uri.startswith("https")
-        key = "{0}#{1}#{2}#{3}".format(
-            http_request.http_proxy_host,
-            http_request.http_proxy_port,
-            http_request.https_insecure,
-            is_https,
-        )
+
+        # MTLS
+        is_mtls = http_request.mtls_enabled()
+
+        # Proxy
+        is_proxy = http_request.http_proxy_host is not None
+
+        if not is_mtls:
+            key = "{0}#{1}#{2}#{3}".format(
+                http_request.http_proxy_host,
+                http_request.http_proxy_port,
+                http_request.https_insecure,
+                is_https,
+            )
+        else:
+            key = "{0}#{1}#{2}#{3}#{4}".format(
+                http_request.http_proxy_host,
+                http_request.http_proxy_port,
+                http_request.https_insecure,
+                is_https,
+                http_request.mtls_pool_key_get(),
+            )
 
         # Check
         if key in self._u3_proxy_pool:
@@ -176,16 +192,52 @@ class HttpClient(object):
 
             # Uri
             # noinspection HttpUrlsUsage
-            proxy_url = "http://{0}:{1}".format(
-                http_request.http_proxy_host,
-                http_request.http_proxy_port)
+            if is_proxy:
+                # noinspection HttpUrlsUsage
+                proxy_url = "http://{0}:{1}".format(
+                    http_request.http_proxy_host,
+                    http_request.http_proxy_port)
 
             # Ok, allocate
             # Force underlying fifo queue to 1024 via maxsize
-            if http_request.https_insecure and is_https:
-                p = ProxyManager(num_pools=1024, maxsize=1024, proxy_url=proxy_url, assert_hostname=False)
+            if is_https:
+                if is_mtls:
+                    if is_proxy:
+                        p = ProxyManager(
+                            num_pools=1024, maxsize=1024, proxy_url=proxy_url,
+                            assert_hostname=False if http_request.https_insecure else True,
+                            key_file=http_request.mtls_client_key,
+                            cert_file=http_request.mtls_client_crt,
+                            key_password=http_request.mtls_client_pwd,
+                            ca_certs=http_request.mtls_ca_crt,
+                        )
+                    else:
+                        p = PoolManager(
+                            num_pools=1024, maxsize=1024,
+                            assert_hostname=False if http_request.https_insecure else True,
+                            key_file=http_request.mtls_client_key,
+                            cert_file=http_request.mtls_client_crt,
+                            key_password=http_request.mtls_client_pwd,
+                            ca_certs=http_request.mtls_ca_crt,
+                        )
+                else:
+                    if is_proxy:
+                        p = ProxyManager(
+                            num_pools=1024, maxsize=1024, proxy_url=proxy_url,
+                            assert_hostname=False if http_request.https_insecure else True
+                        )
+                    else:
+                        p = PoolManager(
+                            num_pools=1024, maxsize=1024,
+                            assert_hostname=False if http_request.https_insecure else True
+                        )
             else:
-                p = ProxyManager(num_pools=1024, maxsize=1024, proxy_url=proxy_url)
+                if is_proxy:
+                    p = ProxyManager(num_pools=1024, maxsize=1024, proxy_url=proxy_url)
+                else:
+                    p = PoolManager(num_pools=1024, maxsize=1024)
+
+            # STORE
             self._u3_proxy_pool[key] = p
             logger.info("Started new pool for key=%s", key)
             SolBase.sleep(0)
@@ -242,11 +294,14 @@ class HttpClient(object):
         """
 
         try:
-            # Default to gevent
+            # Default to urllib3
             impl = http_request.force_http_implementation
             if impl == HttpClient.HTTP_IMPL_AUTO:
                 # Fallback urllib3 as default
                 impl = HttpClient.HTTP_IMPL_URLLIB3
+
+            # Validate MTLS
+            http_request.mtls_status_validate()
 
             # Uri
             url = URL(http_request.uri)
@@ -317,7 +372,7 @@ class HttpClient(object):
         if http_request.chunked:
             # Chunked is NOT supported for geventhttpclient
             # REF : https://github.com/geventhttpclient/geventhttpclient/issues/158
-            raise Exception("Chunked not supported for gevent, req=%s" % http_request)
+            raise Exception("Chunked not supported for geventhttpclient, req=%s" % http_request)
 
     def _go_gevent(self, http_request, http_response):
         """

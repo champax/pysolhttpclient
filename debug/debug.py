@@ -21,16 +21,38 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 # ===============================================================================
 """
+from os.path import dirname, abspath
 
-# WE MUST MONKEY PATCH ASAP HERE FOR PY3
+import urllib3
 from pysolbase.SolBase import SolBase
+from urllib3 import Retry
 
-SolBase.voodoo_init(init_logging=False)
+current_dir = dirname(abspath(__file__)) + SolBase.get_pathseparator()
+mtls_dir = current_dir + "../z_mtls/"
+s_client_pem = mtls_dir + "client.pem"
+s_client_key = mtls_dir + "client.key"
+s_client_pass = "zzz"
+s_ca_crt = mtls_dir + "ca.crt"
+uri = "https://127.0.0.1:7943"
 
-# # noinspection PyPep8
-# import warnings
-# warnings.simplefilter("ignore", ResourceWarning)
-#
-# # noinspection PyPep8
-# from urllib3.exceptions import InsecureRequestWarning
-# warnings.simplefilter("ignore", InsecureRequestWarning)
+retries = Retry(total=0,
+                connect=0,
+                read=0,
+                redirect=0)
+pool = urllib3.PoolManager(
+    cert_file=s_client_pem,
+    key_file=s_client_key,
+    key_password=s_client_pass,
+    # ca_certs=s_ca_crt,
+    cert_reqs='CERT_REQUIRED',
+    assert_hostname=False,
+)
+conn = pool.connection_from_url(uri)
+r = conn.urlopen(
+    method='GET',
+    url=uri,
+    headers=None,
+    redirect=False,
+    retries=retries,
+)
+assert r.status == 200

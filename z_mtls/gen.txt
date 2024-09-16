@@ -8,17 +8,19 @@ openssl genpkey -algorithm RSA -out ./ca.key
 openssl req -new -x509 -key ./ca.key -out ./ca.crt -days 3600
 
 -----------------------------
-SERVER GEN
+SERVER GEN (CRT and PEM)
 openssl genpkey -algorithm RSA -out ./server.key
 openssl req -new -key ./server.key -out ./server.csr
 openssl x509 -req -in ./server.csr -CA ./ca.crt -CAkey ./ca.key -CAcreateserial -out ./server.crt  -days 3600
+openssl x509 -in server.crt -out server.pem -outform PEM
 
 -----------------------------
-CLIENT GEN
+CLIENT GEN (CRT and PEM)
 => CAUTION, ORGANISATION MUST NOT BE THE SAME AS SERVER
 openssl genrsa -des3 -out client.key 4096
 openssl req -new -key client.key -out client.csr
 openssl x509 -req -days 365 -in client.csr -CA ca.crt -CAkey ca.key -set_serial 01 -out client.crt -days 3600
+openssl x509 -in client.crt -out client.pem -outform PEM
 
 -----------------------------
 VERIFY

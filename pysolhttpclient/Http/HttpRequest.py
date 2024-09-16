@@ -21,6 +21,8 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 # ===============================================================================
 """
+import os.path
+
 from pysolhttpclient.Http.HttpClient import HttpClient
 
 
@@ -84,6 +86,95 @@ class HttpRequest(object):
         # SUPPORTED only for urllib3 implementation
         self.chunked = False
 
+        # MTLS SUPPORT
+        self.mtls_client_key = None
+        self.mtls_client_crt = None
+        self.mtls_client_pwd = None
+        self.mtls_ca_crt = None
+
+    def mtls_status_validate(self):
+        """
+        Validate MTLS
+        Raise exception in case of issue
+        """
+        _, mtls_ex = self.mtls_status_get()
+        if mtls_ex is not None:
+            raise mtls_ex
+
+    def mtls_enabled(self):
+        """
+        Return True if MTLS is enabled
+        :return: bool
+        :return bool
+        """
+        mtls_status, _ = self.mtls_status_get()
+        if mtls_status == "mtls_on":
+            return True
+        else:
+            return False
+
+    def mtls_pool_key_get(self):
+        """
+        Get MTLS pool key
+        :return: str
+        :return str
+        """
+        mtls_status, _ = self.mtls_status_get()
+        if mtls_status == "mtls_on":
+            return "MTLS_%s_%s_%s_%s" % (
+                self.mtls_ca_crt,
+                self.mtls_client_key,
+                self.mtls_client_crt,
+                len(self.mtls_client_pwd),
+            )
+        else:
+            return None
+
+    def mtls_status_get(self):
+        """
+        Get MTLS status
+        :return tuple msg_status, Exception|None
+        :rtype tuple
+        """
+
+        if self.mtls_ca_crt is None and self.mtls_client_key is None and self.mtls_client_crt is None and self.mtls_client_pwd is None:
+            # No MTLS
+            return "mtls_off", None
+        elif self.mtls_ca_crt is not None and self.mtls_client_key is not None and self.mtls_client_crt is not None and self.mtls_client_pwd is not None:
+            # MTLS ON
+            e = None
+            if not os.path.isfile(self.mtls_ca_crt):
+                e = Exception("MTLS_FAILED (not isfile), mtls_ca_crt=%s" % self.mtls_ca_crt)
+            elif not os.path.isfile(self.mtls_client_key):
+                e = Exception("MTLS_FAILED (not isfile), mtls_client_key=%s" % self.mtls_client_key)
+            elif not os.path.isfile(self.mtls_client_crt):
+                e = Exception("MTLS_FAILED (not isfile), mtls_client_crt=%s" % self.mtls_client_crt)
+            elif len(self.mtls_client_pwd) == 0:
+                e = Exception("MTLS_FAILED (mtls_client_pwd empty)")
+
+            # MUST RUN UNDER URLLIB3
+            if self.force_http_implementation == HttpClient.HTTP_IMPL_AUTO:
+                self.force_http_implementation = HttpClient.HTTP_IMPL_URLLIB3
+            elif self.force_http_implementation == HttpClient.HTTP_IMPL_GEVENT:
+                e = Exception("MTLS_FAILED (not supported on HTTP_IMPL_GEVENT)")
+
+            # CHECK
+            if e is not None:
+                return "mtls_failed", e
+            else:
+                return "mtls_on", None
+        else:
+            # MTLS partially on => INVALID
+            e = Exception(
+                "MTLS_INVALID, mtls_ca_crt=%s, mtls_client_key=%s, mtls_client_crt=%s, mtls_client_pwd=%s" % (
+                    "set" if self.mtls_ca_crt is not None else "unset",
+                    "set" if self.mtls_client_key is not None else "unset",
+                    "set" if self.mtls_client_crt is not None else "unset",
+                    "set" if self.mtls_client_pwd is not None else "unset",
+                )
+            )
+            return "mtls_failed", e
+
     def __str__(self):
         """
         To string override
@@ -91,7 +182,7 @@ class HttpRequest(object):
         :rtype str
         """
 
-        return "hreq:uri={0}*m={1}*pd={2}*ka={3}*cc={4}*httpsi={5}*prox={6}*socks={7}*force={8}*h={9}*to.c/n/g={10}/{11}/{12}".format(
+        return "hreq:uri={0}*m={1}*pd={2}*ka={3}*cc={4}*httpsi={5}*prox={6}*socks={7}*force={8}*h={9}*to.c/n/g={10}/{11}/{12}*mtls={13}".format(
             self.uri,
             self.method,
             len(self.post_data) if self.post_data else "None",
@@ -103,4 +194,5 @@ class HttpRequest(object):
             self.force_http_implementation,
             self.headers,
             self.connection_timeout_ms, self.network_timeout_ms, self.general_timeout_ms,
+            self.mtls_status_get(),
         )
