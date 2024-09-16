@@ -113,7 +113,7 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
 
         s_client_crt = mtls_dir + "client.crt"
         s_client_key = mtls_dir + "client.key"
-        s_client_pass = "zzz"
+        s_client_pass = "zzzz"
         s_ca_crt = mtls_dir + "ca.crt"
 
         self.assertTrue(os.path.isfile(s_client_crt))
@@ -134,6 +134,7 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
         logger.info("GOT hrep=%s", hrep)
         self.assertIsNone(hrep.exception)
         self.assertEqual(hrep.status_code, 200)
+        self.assertEqual(hrep.buffer.decode("utf8"), "MTLS_OK")
 
     def test_add_headers(self):
         """
