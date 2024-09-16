@@ -6,6 +6,7 @@ https://stackoverflow.com/questions/45628601/client-authentication-using-self-si
 CA GEN
 openssl genpkey -algorithm RSA -out ./ca.key
 openssl req -new -x509 -key ./ca.key -out ./ca.crt -days 3600
+openssl x509 -in ca.crt -out ca.pem -outform PEM
 
 -----------------------------
 SERVER GEN (CRT and PEM)

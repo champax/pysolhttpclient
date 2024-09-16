@@ -32,7 +32,7 @@ mtls_dir = current_dir + "../z_mtls/"
 s_client_pem = mtls_dir + "client.pem"
 s_client_key = mtls_dir + "client.key"
 s_client_pass = "zzz"
-s_ca_crt = mtls_dir + "ca.crt"
+s_ca_pem = mtls_dir + "ca.pem"
 uri = "https://127.0.0.1:7943"
 
 retries = Retry(total=0,
@@ -43,7 +43,7 @@ pool = urllib3.PoolManager(
     cert_file=s_client_pem,
     key_file=s_client_key,
     key_password=s_client_pass,
-    # ca_certs=s_ca_crt,
+    ca_certs=s_ca_pem,
     cert_reqs='CERT_REQUIRED',
     assert_hostname=False,
 )
