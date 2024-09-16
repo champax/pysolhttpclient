@@ -91,7 +91,7 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
             self.h.stop()
             self.h = None
 
-    def test_mtls(self):
+    def test_mtls_ok(self):
         """
         Test MTLS
         """
