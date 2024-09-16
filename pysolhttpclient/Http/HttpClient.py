@@ -245,9 +245,8 @@ class HttpClient(object):
             # Default to gevent
             impl = http_request.force_http_implementation
             if impl == HttpClient.HTTP_IMPL_AUTO:
-                # Fallback gevent (urllib3 issue with latest uwsgi, gevent 1.1.1)
+                # Fallback urllib3 as default
                 impl = HttpClient.HTTP_IMPL_URLLIB3
-                # impl = HttpClient.HTTP_IMPL_GEVENT
 
             # Uri
             url = URL(http_request.uri)
@@ -291,6 +290,9 @@ class HttpClient(object):
         :param v: str
         """
 
+        if isinstance(k, str):
+            k = k.lower()
+
         if k not in d:
             d[k] = v
         else:
@@ -305,6 +307,17 @@ class HttpClient(object):
     # ====================================
     # GEVENT
     # ====================================
+    @classmethod
+    def _gevent_check_chunked(cls, http_request):
+        """
+        Check chunked stuff
+        :param http_request: HttpRequest
+        :type http_request: HttpRequest
+        """
+        if http_request.chunked:
+            # Chunked is NOT supported for geventhttpclient
+            # REF : https://github.com/geventhttpclient/geventhttpclient/issues/158
+            raise Exception("Chunked not supported for gevent, req=%s" % http_request)
 
     def _go_gevent(self, http_request, http_response):
         """
@@ -337,6 +350,7 @@ class HttpClient(object):
             # ----------------
             if http_request.post_data:
                 # Post
+                self._gevent_check_chunked(http_request=http_request)
                 response = http.post(url.request_uri,
                                      body=http_request.post_data,
                                      headers=http_request.headers)
@@ -352,6 +366,7 @@ class HttpClient(object):
                 # With post datas (optional)
                 # Get may be called with post buffer (RFC allowed)
                 if http_request.post_data:
+                    self._gevent_check_chunked(http_request=http_request)
                     response = http.request(METHOD_GET,
                                             url.request_uri,
                                             body=http_request.post_data,
@@ -361,6 +376,7 @@ class HttpClient(object):
                                         headers=http_request.headers)
             elif http_request.method == "DELETE":
                 # With post datas
+                self._gevent_check_chunked(http_request=http_request)
                 response = http.delete(url.request_uri,
                                        body=http_request.post_data,
                                        headers=http_request.headers)
@@ -374,21 +390,25 @@ class HttpClient(object):
                                         headers=http_request.headers)
             elif http_request.method == "PUT":
                 # With post datas
+                self._gevent_check_chunked(http_request=http_request)
                 response = http.put(url.request_uri,
                                     body=http_request.post_data,
                                     headers=http_request.headers)
             elif http_request.method == "POST":
                 # With post datas
+                self._gevent_check_chunked(http_request=http_request)
                 response = http.post(url.request_uri,
                                      body=http_request.post_data,
                                      headers=http_request.headers)
             elif http_request.method == "PATCH":
                 # With post datas
+                self._gevent_check_chunked(http_request=http_request)
                 response = http.patch(url.request_uri,
                                       body=http_request.post_data,
                                       headers=http_request.headers)
             elif http_request.method == "TRACE":
                 # With post datas
+                self._gevent_check_chunked(http_request=http_request)
                 response = http.trace(url.request_uri,
                                       body=http_request.post_data,
                                       headers=http_request.headers)
@@ -482,6 +502,7 @@ class HttpClient(object):
                     headers=http_request.headers,
                     redirect=False,
                     retries=retries,
+                    chunked=http_request.chunked,
                 )
             else:
                 r = conn.urlopen(
@@ -513,6 +534,7 @@ class HttpClient(object):
                     headers=http_request.headers,
                     redirect=False,
                     retries=retries,
+                    chunked=http_request.chunked,
                 )
             else:
                 raise Exception("Invalid urllib3 method={0}".format(http_request.method))
