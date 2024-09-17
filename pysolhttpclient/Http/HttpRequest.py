@@ -87,6 +87,9 @@ class HttpRequest(object):
         self.chunked = False
 
         # MTLS SUPPORT
+        # NOTE : this will rely on file system load (which is bad for perf....)
+        # => https://github.com/urllib3/urllib3/issues/474
+        # => https://bugs.python.org/issue16487
         self.mtls_client_key = None
         self.mtls_client_crt = None
         self.mtls_client_pwd = None
