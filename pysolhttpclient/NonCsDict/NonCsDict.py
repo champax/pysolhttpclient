@@ -24,7 +24,7 @@
 from typing import Mapping
 
 
-class CsDict(dict):
+class NonCsDict(dict):
     """
     Case insensitive dict
     """
@@ -39,32 +39,32 @@ class CsDict(dict):
         return key.lower() if isinstance(key, str) else key
 
     def __init__(self, *args, **kwargs):
-        super(CsDict, self).__init__(*args, **kwargs)
+        super(NonCsDict, self).__init__(*args, **kwargs)
         self._lower_all_keys()
 
     def __getitem__(self, key):
-        return super(CsDict, self).__getitem__(self._to_lower(key))
+        return super(NonCsDict, self).__getitem__(self._to_lower(key))
 
     def __setitem__(self, key, value):
-        super(CsDict, self).__setitem__(self._to_lower(key), value)
+        super(NonCsDict, self).__setitem__(self._to_lower(key), value)
 
     def __delitem__(self, key):
-        return super(CsDict, self).__delitem__(self._to_lower(key))
+        return super(NonCsDict, self).__delitem__(self._to_lower(key))
 
     def __contains__(self, key):
-        return super(CsDict, self).__contains__(self._to_lower(key))
+        return super(NonCsDict, self).__contains__(self._to_lower(key))
 
     def pop(self, key, *args, **kwargs):
-        return super(CsDict, self).pop(self._to_lower(key), *args, **kwargs)
+        return super(NonCsDict, self).pop(self._to_lower(key), *args, **kwargs)
 
     def get(self, key, *args, **kwargs):
-        return super(CsDict, self).get(self._to_lower(key), *args, **kwargs)
+        return super(NonCsDict, self).get(self._to_lower(key), *args, **kwargs)
 
     def setdefault(self, key, *args, **kwargs):
-        return super(CsDict, self).setdefault(self._to_lower(key), *args, **kwargs)
+        return super(NonCsDict, self).setdefault(self._to_lower(key), *args, **kwargs)
 
     def copy(self):
-        return CsDict(self)
+        return NonCsDict(self)
 
     def update(self, other=None, **kwargs):
         if other is not None:
@@ -76,6 +76,6 @@ class CsDict(dict):
     def _lower_all_keys(self):
         for k in list(self.keys()):
             # Pop for us
-            v = super(CsDict, self).pop(k)
+            v = super(NonCsDict, self).pop(k)
             # Add to us (will be lowered)
             self.__setitem__(k, v)

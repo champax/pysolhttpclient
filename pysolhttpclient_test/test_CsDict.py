@@ -24,7 +24,7 @@
 import logging
 import unittest
 
-from pysolhttpclient.CsDict.CsDict import CsDict
+from pysolhttpclient.NonCsDict.NonCsDict import NonCsDict
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class TestCsDict(unittest.TestCase):
         Test
         """
 
-        d = CsDict()
+        d = NonCsDict()
 
         d["AAA"] = 1
         d["BBb"] = 2
