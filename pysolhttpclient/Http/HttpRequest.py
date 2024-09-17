@@ -92,14 +92,16 @@ class HttpRequest(object):
         self.mtls_client_pwd = None
         self.mtls_ca_crt = None
 
+        # MTLS status (refreshed by mtls_status_refresh)
+        self._mtls_status_msg, self._mtls_status_ex = None, None
+
     def mtls_status_validate(self):
         """
         Validate MTLS
         Raise exception in case of issue
         """
-        _, mtls_ex = self.mtls_status_get()
-        if mtls_ex is not None:
-            raise mtls_ex
+        if self._mtls_status_ex is not None:
+            raise self._mtls_status_ex
 
     def mtls_enabled(self):
         """
@@ -107,8 +109,7 @@ class HttpRequest(object):
         :return: bool
         :return bool
         """
-        mtls_status, _ = self.mtls_status_get()
-        if mtls_status == "mtls_on":
+        if self._mtls_status_msg == "mtls_on":
             return True
         else:
             return False
@@ -116,11 +117,10 @@ class HttpRequest(object):
     def mtls_pool_key_get(self):
         """
         Get MTLS pool key
-        :return: str
-        :return str
+        :return: str,None
+        :return str,None
         """
-        mtls_status, _ = self.mtls_status_get()
-        if mtls_status == "mtls_on":
+        if self._mtls_status_msg == "mtls_on":
             return "MTLS_%s_%s_%s_%s" % (
                 self.mtls_ca_crt,
                 self.mtls_client_key,
@@ -130,17 +130,19 @@ class HttpRequest(object):
         else:
             return None
 
-    def mtls_status_get(self):
+    def mtls_status_refresh(self):
         """
-        Get MTLS status
+        Get MTLS status _mtls_status_msg and _mtls_status_ex
         :return tuple msg_status, Exception|None
         :rtype tuple
         """
 
-        if self.mtls_ca_crt is None and self.mtls_client_key is None and self.mtls_client_crt is None and self.mtls_client_pwd is None:
+        # Notice : mtls_client_pwd is optional
+
+        if self.mtls_ca_crt is None and self.mtls_client_key is None and self.mtls_client_crt is None:
             # No MTLS
-            return "mtls_off", None
-        elif self.mtls_ca_crt is not None and self.mtls_client_key is not None and self.mtls_client_crt is not None and self.mtls_client_pwd is not None:
+            self._mtls_status_msg, self._mtls_status_ex = "mtls_off", None
+        elif self.mtls_ca_crt is not None and self.mtls_client_key is not None and self.mtls_client_crt is not None:
             # MTLS ON
             e = None
             if not os.path.isfile(self.mtls_ca_crt):
@@ -149,8 +151,6 @@ class HttpRequest(object):
                 e = Exception("MTLS_FAILED (not isfile), mtls_client_key=%s" % self.mtls_client_key)
             elif not os.path.isfile(self.mtls_client_crt):
                 e = Exception("MTLS_FAILED (not isfile), mtls_client_crt=%s" % self.mtls_client_crt)
-            elif len(self.mtls_client_pwd) == 0:
-                e = Exception("MTLS_FAILED (mtls_client_pwd empty)")
 
             # MUST RUN UNDER URLLIB3
             if self.force_http_implementation == HttpClient.HTTP_IMPL_AUTO:
@@ -160,20 +160,19 @@ class HttpRequest(object):
 
             # CHECK
             if e is not None:
-                return "mtls_failed", e
+                self._mtls_status_msg, self._mtls_status_ex = "mtls_failed", e
             else:
-                return "mtls_on", None
+                self._mtls_status_msg, self._mtls_status_ex = "mtls_on", None
         else:
             # MTLS partially on => INVALID
             e = Exception(
-                "MTLS_INVALID, mtls_ca_crt=%s, mtls_client_key=%s, mtls_client_crt=%s, mtls_client_pwd=%s" % (
+                "MTLS_INVALID, mtls_ca_crt=%s, mtls_client_key=%s, mtls_client_crt=%s" % (
                     "set" if self.mtls_ca_crt is not None else "unset",
                     "set" if self.mtls_client_key is not None else "unset",
                     "set" if self.mtls_client_crt is not None else "unset",
-                    "set" if self.mtls_client_pwd is not None else "unset",
                 )
             )
-            return "mtls_failed", e
+            self._mtls_status_msg, self._mtls_status_ex = "mtls_failed", e
 
     def __str__(self):
         """
@@ -182,7 +181,7 @@ class HttpRequest(object):
         :rtype str
         """
 
-        return "hreq:uri={0}*m={1}*pd={2}*ka={3}*cc={4}*httpsi={5}*prox={6}*socks={7}*force={8}*h={9}*to.c/n/g={10}/{11}/{12}*mtls={13}".format(
+        return "hreq:uri={0}*m={1}*pd={2}*ka={3}*cc={4}*httpsi={5}*prox={6}*socks={7}*force={8}*h={9}*to.c/n/g={10}/{11}/{12}*mtls={13}/{14}".format(
             self.uri,
             self.method,
             len(self.post_data) if self.post_data else "None",
@@ -194,5 +193,5 @@ class HttpRequest(object):
             self.force_http_implementation,
             self.headers,
             self.connection_timeout_ms, self.network_timeout_ms, self.general_timeout_ms,
-            self.mtls_status_get(),
+            self._mtls_status_msg, self._mtls_status_ex,
         )

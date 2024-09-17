@@ -26,7 +26,6 @@ import logging
 from ssl import CERT_NONE
 
 import gevent
-import urllib3
 from gevent.threading import Lock
 from gevent.timeout import Timeout
 from geventhttpclient.client import PROTO_HTTPS, HTTPClient, METHOD_GET
@@ -145,31 +144,50 @@ class HttpClient(object):
         :rtype urllib3.poolmanager.ProxyManager
         """
 
-        if not http_request.http_proxy_host and not http_request.mtls_enabled:
-            SolBase.sleep(0)
-            if http_request.https_insecure and http_request.uri.startswith("https"):
-                return self._u3_basic_pool_https_assert_off
-            else:
-                return self._u3_basic_pool_assert_on
+        # --------------------------
+        # DETECT
 
-        # Compute key
+        # HTTPS
         is_https = http_request.uri.startswith("https")
 
         # MTLS
         is_mtls = http_request.mtls_enabled()
 
-        # Proxy
+        # PROXY
         is_proxy = http_request.http_proxy_host is not None
 
-        if not is_mtls:
-            key = "{0}#{1}#{2}#{3}".format(
+        # --------------------------
+        # HANDLE PROXY OFF + MTLS OFF
+        if not is_proxy and not is_mtls:
+            if http_request.https_insecure and is_https:
+                # PROXY OFF + MTLS OFF, HTTPS INSECURE
+                return self._u3_basic_pool_https_assert_off
+            else:
+                # PROXY OFF + MTLS OFF, HTTPS SECURE OR HTTP
+                return self._u3_basic_pool_assert_on
+
+        # --------------------------
+        # HERE, PROXY AND/OR MTLS
+
+        # GET POOL KEY
+        if is_proxy and not is_mtls:
+            # PROXY ON, MTLS OFF
+            key = "P_{0}#{1}#{2}#{3}".format(
                 http_request.http_proxy_host,
                 http_request.http_proxy_port,
                 http_request.https_insecure,
                 is_https,
             )
+        elif not is_proxy and is_mtls:
+            # PROXY OFF, MTLS ON
+            key = "M_{0}#{1}#{2}".format(
+                http_request.https_insecure,
+                is_https,
+                http_request.mtls_pool_key_get(),
+            )
         else:
-            key = "{0}#{1}#{2}#{3}#{4}".format(
+            # PROXY ON, MTLS ON
+            key = "PM_{0}#{1}#{2}#{3}#{4}".format(
                 http_request.http_proxy_host,
                 http_request.http_proxy_port,
                 http_request.https_insecure,
@@ -177,7 +195,7 @@ class HttpClient(object):
                 http_request.mtls_pool_key_get(),
             )
 
-        # Check
+        # TRY FROM CACHE
         if key in self._u3_proxy_pool:
             SolBase.sleep(0)
             return self._u3_proxy_pool[key]
@@ -203,6 +221,7 @@ class HttpClient(object):
             if is_https:
                 if is_mtls:
                     if is_proxy:
+                        # HTTPS ON + MTLS ON + PROXY ON
                         p = ProxyManager(
                             num_pools=1024, maxsize=1024, proxy_url=proxy_url,
                             assert_hostname=False if http_request.https_insecure else True,
@@ -212,6 +231,7 @@ class HttpClient(object):
                             ca_certs=http_request.mtls_ca_crt,
                         )
                     else:
+                        # HTTPS ON + MTLS ON + PROXY OFF
                         p = PoolManager(
                             num_pools=1024, maxsize=1024,
                             assert_hostname=False if http_request.https_insecure else True,
@@ -222,22 +242,27 @@ class HttpClient(object):
                         )
                 else:
                     if is_proxy:
+                        # HTTPS ON + MTLS OFF + PROXY ON
                         p = ProxyManager(
                             num_pools=1024, maxsize=1024, proxy_url=proxy_url,
                             assert_hostname=False if http_request.https_insecure else True
                         )
                     else:
+                        # HTTPS ON + MTLS OFF + PROXY OFF
                         p = PoolManager(
                             num_pools=1024, maxsize=1024,
                             assert_hostname=False if http_request.https_insecure else True
                         )
             else:
+                # HTTPS OFF (cannot have MTLS ON)
                 if is_proxy:
+                    # HTTPS OFF + PROXY ON
                     p = ProxyManager(num_pools=1024, maxsize=1024, proxy_url=proxy_url)
                 else:
+                    # HTTPS OFF + PROXY OFF
                     p = PoolManager(num_pools=1024, maxsize=1024)
 
-            # STORE
+            # STORE IN CACHE
             self._u3_proxy_pool[key] = p
             logger.info("Started new pool for key=%s", key)
             SolBase.sleep(0)
@@ -301,6 +326,7 @@ class HttpClient(object):
                 impl = HttpClient.HTTP_IMPL_URLLIB3
 
             # Validate MTLS
+            http_request.mtls_status_refresh()
             http_request.mtls_status_validate()
 
             # Uri
@@ -309,9 +335,8 @@ class HttpClient(object):
 
             # If proxy and https => urllib3
             if http_request.http_proxy_host and url.scheme == PROTO_HTTPS:
-                # Fallback gevent (urllib3 issue with latest uwsgi, gevent 1.1.1)
+                # Proxy via urllib3
                 impl = HttpClient.HTTP_IMPL_URLLIB3
-                # impl = HttpClient.HTTP_IMPL_GEVENT
 
             # Log
             logger.debug("Http using impl=%s", impl)
@@ -520,20 +545,16 @@ class HttpClient(object):
         http_response.http_implementation = HttpClient.HTTP_IMPL_URLLIB3
 
         # Get pool
-        logger.debug("From pool")
         cur_pool = self.urllib3_from_pool(http_request)
-        logger.debug("From pool ok")
         SolBase.sleep(0)
 
         # From pool
-        logger.debug("From pool2")
         if http_request.http_proxy_host:
             # ProxyManager : direct
             conn = cur_pool
         else:
             # Get connection from basic pool
             conn = cur_pool.connection_from_url(http_request.uri)
-        logger.debug("From pool2 ok")
         SolBase.sleep(0)
 
         # Retries

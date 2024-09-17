@@ -97,7 +97,7 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
         """
 
         cmd = "netstat -ltpn | grep 7943"
-        cmd_out = mycmd = subprocess.getoutput(cmd)
+        cmd_out = subprocess.getoutput(cmd)
         logger.info("GOT cmd_out=%s", cmd_out)
         if ":7943" not in cmd_out:
             logger.info("MTLS not detected, bypass")
@@ -240,6 +240,7 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
                 hreq.uri = "https://pypi.org"
             else:
                 # This will redirect https
+                # noinspection HttpUrlsUsage
                 hreq.uri = "http://pypi.org"
 
             # Http proxy
