@@ -24,7 +24,7 @@
 import logging
 import unittest
 
-from pysolhttpclient.Dict.csdict import CsDict
+from pysolhttpclient.CsDict.CsDict import CsDict
 
 logger = logging.getLogger(__name__)
 

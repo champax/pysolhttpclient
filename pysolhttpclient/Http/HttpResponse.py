@@ -23,7 +23,7 @@
 """
 from pysolbase.SolBase import SolBase
 
-from pysolhttpclient.Dict.csdict import CsDict
+from pysolhttpclient.CsDict.CsDict import CsDict
 
 
 class HttpResponse(object):
