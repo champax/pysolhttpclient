@@ -91,6 +91,118 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
             self.h.stop()
             self.h = None
 
+    def test_mtls_limit_cases(self):
+        """
+        Test
+        """
+
+        current_dir = dirname(abspath(__file__)) + SolBase.get_pathseparator()
+        logger.info("Using current_dir=%s", current_dir)
+
+        mtls_dir = current_dir + "../z_mtls/"
+        logger.info("Using mtls_dir=%s", mtls_dir)
+        self.assertTrue(os.path.exists(mtls_dir))
+
+        s_client_crt = mtls_dir + "client.crt"
+        s_client_key = mtls_dir + "client.key"
+        s_client_pass = "zzzz"
+        s_ca_crt = mtls_dir + "ca.crt"
+
+        self.assertTrue(os.path.isfile(s_client_crt))
+        self.assertTrue(os.path.isfile(s_client_key))
+        self.assertTrue(os.path.isfile(s_ca_crt))
+
+        # Lets go
+        mtls_uri = "https://127.0.0.1:7943"
+        hreq = HttpRequest()
+        hreq.method = "GET"
+        hreq.uri = mtls_uri
+        hreq.mtls_client_key = s_client_key
+        hreq.mtls_client_crt = s_client_crt
+        hreq.mtls_client_pwd = s_client_pass
+        hreq.mtls_ca_crt = s_ca_crt
+
+        # Default
+        self.assertIsNone(hreq._mtls_status_msg)
+        self.assertIsNone(hreq._mtls_status_ex)
+
+        # OK
+        hreq.mtls_status_refresh()
+        self.assertEquals("mtls_on", hreq._mtls_status_msg)
+        self.assertIsNone(hreq._mtls_status_ex)
+        hreq.mtls_status_validate()
+
+        # NO PWD
+        hreq.mtls_client_pwd = None
+        hreq.mtls_status_refresh()
+        self.assertEquals("mtls_on", hreq._mtls_status_msg)
+        self.assertIsNone(hreq._mtls_status_ex)
+        hreq.mtls_status_validate()
+
+        # Invalid client key
+        hreq.mtls_client_key = None
+        hreq.mtls_status_refresh()
+        self.assertEquals("mtls_failed", hreq._mtls_status_msg)
+        self.assertIsNotNone(hreq._mtls_status_ex)
+        self.assertRaisesRegex(Exception, "MTLS_INVALID.*mtls_client_key.*", hreq.mtls_status_validate)
+
+        hreq.mtls_client_key = "do_not_exists"
+        hreq.mtls_status_refresh()
+        self.assertEquals("mtls_failed", hreq._mtls_status_msg)
+        self.assertIsNotNone(hreq._mtls_status_ex)
+        self.assertRaisesRegex(Exception, "MTLS_FAILED.*mtls_client_key.*", hreq.mtls_status_validate)
+
+        # Invalid client crt
+        hreq.mtls_client_key = s_client_key
+        hreq.mtls_client_crt = None
+        hreq.mtls_status_refresh()
+        self.assertEquals("mtls_failed", hreq._mtls_status_msg)
+        self.assertIsNotNone(hreq._mtls_status_ex)
+        self.assertRaisesRegex(Exception, "MTLS_INVALID.*mtls_client_crt.*", hreq.mtls_status_validate)
+
+        hreq.mtls_client_crt = "do_not_exists"
+        hreq.mtls_status_refresh()
+        self.assertEquals("mtls_failed", hreq._mtls_status_msg)
+        self.assertIsNotNone(hreq._mtls_status_ex)
+        self.assertRaisesRegex(Exception, "MTLS_FAILED.*mtls_client_crt.*", hreq.mtls_status_validate)
+
+        # Invalid ca crt
+        hreq.mtls_client_crt = s_client_crt
+        hreq.mtls_ca_crt = None
+        hreq.mtls_status_refresh()
+        self.assertEquals("mtls_failed", hreq._mtls_status_msg)
+        self.assertIsNotNone(hreq._mtls_status_ex)
+        self.assertRaisesRegex(Exception, "MTLS_INVALID.*mtls_ca_crt.*", hreq.mtls_status_validate)
+
+        hreq.mtls_ca_crt = "do_not_exists"
+        hreq.mtls_status_refresh()
+        self.assertEquals("mtls_failed", hreq._mtls_status_msg)
+        self.assertIsNotNone(hreq._mtls_status_ex)
+        self.assertRaisesRegex(Exception, "MTLS_FAILED.*mtls_ca_crt.*", hreq.mtls_status_validate)
+
+        # Reset
+        hreq.mtls_client_key = s_client_key
+        hreq.mtls_client_crt = s_client_crt
+        hreq.mtls_client_pwd = s_client_pass
+        hreq.mtls_ca_crt = s_ca_crt
+
+        # Force gevent
+        hreq.force_http_implementation = HttpClient.HTTP_IMPL_GEVENT
+        hreq.mtls_status_refresh()
+        self.assertEquals("mtls_failed", hreq._mtls_status_msg)
+        self.assertIsNotNone(hreq._mtls_status_ex)
+        self.assertRaisesRegex(Exception, "MTLS_FAILED.*not supported on HTTP_IMPL_GEVENT", hreq.mtls_status_validate)
+
+        # Disable
+        hreq.mtls_client_key = None
+        hreq.mtls_client_crt = None
+        hreq.mtls_ca_crt = None
+        hreq.force_http_implementation = HttpClient.HTTP_IMPL_AUTO
+        hreq.mtls_status_refresh()
+        self.assertEquals("mtls_off", hreq._mtls_status_msg)
+        self.assertIsNone(hreq._mtls_status_ex)
+        hreq.mtls_status_validate()
+
     def test_mtls_ok(self):
         """
         Test MTLS
