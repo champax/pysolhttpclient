@@ -90,32 +90,11 @@ class HttpRequest(object):
         # NOTE : this will rely on file system load (which is bad for perf....)
         # => https://github.com/urllib3/urllib3/issues/474
         # => https://bugs.python.org/issue16487
-        self.mtls_client_key = None # Mandatory
-        self.mtls_client_crt = None # Mandatory
-        self.mtls_client_pwd = None # Optional
-        self.mtls_ca_crt = None # Optional
-
-        # MTLS status (refreshed by mtls_status_refresh)
-        self._mtls_status_msg, self._mtls_status_ex = None, None
-
-    def mtls_status_validate(self):
-        """
-        Validate MTLS
-        Raise exception in case of issue
-        """
-        if self._mtls_status_ex is not None:
-            raise self._mtls_status_ex
-
-    def mtls_enabled(self):
-        """
-        Return True if MTLS is enabled
-        :return: bool
-        :return bool
-        """
-        if self._mtls_status_msg == "mtls_on":
-            return True
-        else:
-            return False
+        self.mtls_enabled = False
+        self.mtls_client_key = None  # Mandatory
+        self.mtls_client_crt = None  # Mandatory
+        self.mtls_client_pwd = None  # Optional
+        self.mtls_ca_crt = None  # Optional
 
     def mtls_pool_key_get(self):
         """
@@ -123,7 +102,7 @@ class HttpRequest(object):
         :return: str,None
         :return str,None
         """
-        if self._mtls_status_msg == "mtls_on":
+        if self.mtls_enabled:
             return "MTLS_%s_%s_%s_%s" % (
                 self.mtls_ca_crt,
                 self.mtls_client_key,
@@ -133,52 +112,42 @@ class HttpRequest(object):
         else:
             return None
 
-    def mtls_status_refresh(self):
+    def mtls_status_validate(self):
         """
         Get MTLS status _mtls_status_msg and _mtls_status_ex
         :return tuple msg_status, Exception|None
         :rtype tuple
         """
 
-        # Notice : mtls_client_pwd is optional
+        if not self.mtls_enabled:
+            return
 
-        if self.mtls_client_key is None and self.mtls_client_crt is None:
-            # No MTLS
-            self._mtls_status_msg, self._mtls_status_ex = "mtls_off", None
-        elif self.mtls_client_key is not None and self.mtls_client_crt is not None:
-            # MTLS ON
-            e = None
-            # OPTIONAL
-            if self.mtls_ca_crt is not None and not os.path.isfile(self.mtls_ca_crt):
-                e = Exception("MTLS_FAILED (not isfile), mtls_ca_crt=%s" % self.mtls_ca_crt)
-            # MANDATORY
-            elif not os.path.isfile(self.mtls_client_key):
-                e = Exception("MTLS_FAILED (not isfile), mtls_client_key=%s" % self.mtls_client_key)
-            # MANDATORY
-            elif not os.path.isfile(self.mtls_client_crt):
-                e = Exception("MTLS_FAILED (not isfile), mtls_client_crt=%s" % self.mtls_client_crt)
-
-            # MUST RUN UNDER URLLIB3
-            if self.force_http_implementation == HttpClient.HTTP_IMPL_AUTO:
-                self.force_http_implementation = HttpClient.HTTP_IMPL_URLLIB3
-            elif self.force_http_implementation == HttpClient.HTTP_IMPL_GEVENT:
-                e = Exception("MTLS_FAILED (not supported on HTTP_IMPL_GEVENT)")
-
-            # CHECK
-            if e is not None:
-                self._mtls_status_msg, self._mtls_status_ex = "mtls_failed", e
-            else:
-                self._mtls_status_msg, self._mtls_status_ex = "mtls_on", None
-        else:
-            # MTLS partially on => INVALID
-            e = Exception(
-                "MTLS_INVALID, mtls_ca_crt=%s, mtls_client_key=%s, mtls_client_crt=%s" % (
+        # Notice : mtls_client_pwd and mtls_ca_crt are optional
+        if self.mtls_client_key is None or self.mtls_client_crt is None:
+            # Invalid
+            raise Exception(
+                "MTLS_INVALID_A, mtls_ca_crt=%s, mtls_client_key=%s, mtls_client_crt=%s" % (
                     "set" if self.mtls_ca_crt is not None else "unset",
                     "set" if self.mtls_client_key is not None else "unset",
                     "set" if self.mtls_client_crt is not None else "unset",
                 )
             )
-            self._mtls_status_msg, self._mtls_status_ex = "mtls_failed", e
+
+        # OPTIONAL
+        if self.mtls_ca_crt is not None and not os.path.isfile(self.mtls_ca_crt):
+            raise Exception("MTLS_FAILED (not isfile), mtls_ca_crt=%s" % self.mtls_ca_crt)
+        # MANDATORY
+        elif not os.path.isfile(self.mtls_client_key):
+            raise Exception("MTLS_FAILED (not isfile), mtls_client_key=%s" % self.mtls_client_key)
+        # MANDATORY
+        elif not os.path.isfile(self.mtls_client_crt):
+            raise Exception("MTLS_FAILED (not isfile), mtls_client_crt=%s" % self.mtls_client_crt)
+
+        # MUST RUN UNDER URLLIB3
+        if self.force_http_implementation == HttpClient.HTTP_IMPL_AUTO:
+            self.force_http_implementation = HttpClient.HTTP_IMPL_URLLIB3
+        elif self.force_http_implementation == HttpClient.HTTP_IMPL_GEVENT:
+            raise Exception("MTLS_FAILED (not supported on HTTP_IMPL_GEVENT)")
 
     def __str__(self):
         """
@@ -187,7 +156,7 @@ class HttpRequest(object):
         :rtype str
         """
 
-        return "hreq:uri={0}*m={1}*pd={2}*ka={3}*cc={4}*httpsi={5}*prox={6}*socks={7}*force={8}*h={9}*to.c/n/g={10}/{11}/{12}*mtls={13}/{14}".format(
+        return "hreq:uri={0}*m={1}*pd={2}*ka={3}*cc={4}*httpsi={5}*prox={6}*socks={7}*force={8}*h={9}*to.c/n/g={10}/{11}/{12}*mtls={13}/{14}/{15}/{16}/{17}".format(
             self.uri,
             self.method,
             len(self.post_data) if self.post_data else "None",
@@ -199,5 +168,9 @@ class HttpRequest(object):
             self.force_http_implementation,
             self.headers,
             self.connection_timeout_ms, self.network_timeout_ms, self.general_timeout_ms,
-            self._mtls_status_msg, self._mtls_status_ex,
+            self.mtls_enabled,
+            "y" if self.mtls_client_crt is not None else "",
+            "y" if self.mtls_client_key is not None else "",
+            "y" if self.mtls_client_pwd is not None else "",
+            "y" if self.mtls_ca_crt is not None else "",
         )

@@ -117,67 +117,40 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
         hreq = HttpRequest()
         hreq.method = "GET"
         hreq.uri = mtls_uri
+        hreq.mtls_enabled = True
         hreq.mtls_client_key = s_client_key
         hreq.mtls_client_crt = s_client_crt
         hreq.mtls_client_pwd = s_client_pass
         hreq.mtls_ca_crt = s_ca_crt
 
-        # Default
-        self.assertIsNone(hreq._mtls_status_msg)
-        self.assertIsNone(hreq._mtls_status_ex)
-
         # OK
-        hreq.mtls_status_refresh()
-        self.assertEquals("mtls_on", hreq._mtls_status_msg)
-        self.assertIsNone(hreq._mtls_status_ex)
         hreq.mtls_status_validate()
 
-        # NO PWD
+        # NO PWD (optional)
         hreq.mtls_client_pwd = None
-        hreq.mtls_status_refresh()
-        self.assertEquals("mtls_on", hreq._mtls_status_msg)
-        self.assertIsNone(hreq._mtls_status_ex)
         hreq.mtls_status_validate()
 
         # Invalid client key
         hreq.mtls_client_key = None
-        hreq.mtls_status_refresh()
-        self.assertEquals("mtls_failed", hreq._mtls_status_msg)
-        self.assertIsNotNone(hreq._mtls_status_ex)
         self.assertRaisesRegex(Exception, "MTLS_INVALID.*mtls_client_key.*", hreq.mtls_status_validate)
 
         hreq.mtls_client_key = "do_not_exists"
-        hreq.mtls_status_refresh()
-        self.assertEquals("mtls_failed", hreq._mtls_status_msg)
-        self.assertIsNotNone(hreq._mtls_status_ex)
         self.assertRaisesRegex(Exception, "MTLS_FAILED.*mtls_client_key.*", hreq.mtls_status_validate)
 
         # Invalid client crt
         hreq.mtls_client_key = s_client_key
         hreq.mtls_client_crt = None
-        hreq.mtls_status_refresh()
-        self.assertEquals("mtls_failed", hreq._mtls_status_msg)
-        self.assertIsNotNone(hreq._mtls_status_ex)
         self.assertRaisesRegex(Exception, "MTLS_INVALID.*mtls_client_crt.*", hreq.mtls_status_validate)
 
         hreq.mtls_client_crt = "do_not_exists"
-        hreq.mtls_status_refresh()
-        self.assertEquals("mtls_failed", hreq._mtls_status_msg)
-        self.assertIsNotNone(hreq._mtls_status_ex)
         self.assertRaisesRegex(Exception, "MTLS_FAILED.*mtls_client_crt.*", hreq.mtls_status_validate)
 
         # Invalid ca crt : optional
         hreq.mtls_client_crt = s_client_crt
         hreq.mtls_ca_crt = None
-        hreq.mtls_status_refresh()
-        self.assertEquals("mtls_on", hreq._mtls_status_msg)
-        self.assertIsNone(hreq._mtls_status_ex)
         hreq.mtls_status_validate()
 
         hreq.mtls_ca_crt = "do_not_exists"
-        hreq.mtls_status_refresh()
-        self.assertEquals("mtls_failed", hreq._mtls_status_msg)
-        self.assertIsNotNone(hreq._mtls_status_ex)
         self.assertRaisesRegex(Exception, "MTLS_FAILED.*mtls_ca_crt.*", hreq.mtls_status_validate)
 
         # Reset
@@ -188,19 +161,18 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
 
         # Force gevent
         hreq.force_http_implementation = HttpClient.HTTP_IMPL_GEVENT
-        hreq.mtls_status_refresh()
-        self.assertEquals("mtls_failed", hreq._mtls_status_msg)
-        self.assertIsNotNone(hreq._mtls_status_ex)
         self.assertRaisesRegex(Exception, "MTLS_FAILED.*not supported on HTTP_IMPL_GEVENT", hreq.mtls_status_validate)
 
-        # Disable
+        # Invalid full config but enabled
         hreq.mtls_client_key = None
         hreq.mtls_client_crt = None
         hreq.mtls_ca_crt = None
+        hreq.mtls_client_pwd = None
         hreq.force_http_implementation = HttpClient.HTTP_IMPL_AUTO
-        hreq.mtls_status_refresh()
-        self.assertEquals("mtls_off", hreq._mtls_status_msg)
-        self.assertIsNone(hreq._mtls_status_ex)
+        self.assertRaisesRegex(Exception, "MTLS_INVALID_A.*", hreq.mtls_status_validate)
+
+        # MTLS off
+        hreq.mtls_enabled = False
         hreq.mtls_status_validate()
 
     def test_mtls_ok(self):
@@ -237,6 +209,7 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
         hreq = HttpRequest()
         hreq.method = "GET"
         hreq.uri = mtls_uri
+        hreq.mtls_enabled = True
         hreq.mtls_client_key = s_client_key
         hreq.mtls_client_crt = s_client_crt
         hreq.mtls_client_pwd = s_client_pass

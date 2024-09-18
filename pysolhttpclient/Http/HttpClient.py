@@ -152,7 +152,7 @@ class HttpClient(object):
         is_https = http_request.uri.startswith("https")
 
         # MTLS
-        is_mtls = http_request.mtls_enabled()
+        is_mtls = http_request.mtls_enabled
 
         # PROXY
         is_proxy = http_request.http_proxy_host is not None
@@ -331,7 +331,6 @@ class HttpClient(object):
                 impl = HttpClient.HTTP_IMPL_URLLIB3
 
             # Validate MTLS
-            http_request.mtls_status_refresh()
             http_request.mtls_status_validate()
 
             # Uri
