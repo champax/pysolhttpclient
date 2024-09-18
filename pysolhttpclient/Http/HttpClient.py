@@ -26,6 +26,7 @@ import logging
 from ssl import CERT_NONE
 
 import gevent
+import urllib3
 from gevent.threading import Lock
 from gevent.timeout import Timeout
 from geventhttpclient.client import PROTO_HTTPS, HTTPClient, METHOD_GET
@@ -38,7 +39,7 @@ from pysolhttpclient.Http.HttpResponse import HttpResponse
 logger = logging.getLogger(__name__)
 
 # Suppress warnings
-# urllib3.disable_warnings()
+urllib3.disable_warnings()
 
 
 class HttpClient(object):
