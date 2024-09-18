@@ -166,13 +166,13 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
         self.assertIsNotNone(hreq._mtls_status_ex)
         self.assertRaisesRegex(Exception, "MTLS_FAILED.*mtls_client_crt.*", hreq.mtls_status_validate)
 
-        # Invalid ca crt
+        # Invalid ca crt : optional
         hreq.mtls_client_crt = s_client_crt
         hreq.mtls_ca_crt = None
         hreq.mtls_status_refresh()
-        self.assertEquals("mtls_failed", hreq._mtls_status_msg)
-        self.assertIsNotNone(hreq._mtls_status_ex)
-        self.assertRaisesRegex(Exception, "MTLS_INVALID.*mtls_ca_crt.*", hreq.mtls_status_validate)
+        self.assertEquals("mtls_on", hreq._mtls_status_msg)
+        self.assertIsNone(hreq._mtls_status_ex)
+        hreq.mtls_status_validate()
 
         hreq.mtls_ca_crt = "do_not_exists"
         hreq.mtls_status_refresh()

@@ -90,10 +90,10 @@ class HttpRequest(object):
         # NOTE : this will rely on file system load (which is bad for perf....)
         # => https://github.com/urllib3/urllib3/issues/474
         # => https://bugs.python.org/issue16487
-        self.mtls_client_key = None
-        self.mtls_client_crt = None
-        self.mtls_client_pwd = None
-        self.mtls_ca_crt = None
+        self.mtls_client_key = None # Mandatory
+        self.mtls_client_crt = None # Mandatory
+        self.mtls_client_pwd = None # Optional
+        self.mtls_ca_crt = None # Optional
 
         # MTLS status (refreshed by mtls_status_refresh)
         self._mtls_status_msg, self._mtls_status_ex = None, None
@@ -142,16 +142,19 @@ class HttpRequest(object):
 
         # Notice : mtls_client_pwd is optional
 
-        if self.mtls_ca_crt is None and self.mtls_client_key is None and self.mtls_client_crt is None:
+        if self.mtls_client_key is None and self.mtls_client_crt is None:
             # No MTLS
             self._mtls_status_msg, self._mtls_status_ex = "mtls_off", None
-        elif self.mtls_ca_crt is not None and self.mtls_client_key is not None and self.mtls_client_crt is not None:
+        elif self.mtls_client_key is not None and self.mtls_client_crt is not None:
             # MTLS ON
             e = None
-            if not os.path.isfile(self.mtls_ca_crt):
+            # OPTIONAL
+            if self.mtls_ca_crt is not None and not os.path.isfile(self.mtls_ca_crt):
                 e = Exception("MTLS_FAILED (not isfile), mtls_ca_crt=%s" % self.mtls_ca_crt)
+            # MANDATORY
             elif not os.path.isfile(self.mtls_client_key):
                 e = Exception("MTLS_FAILED (not isfile), mtls_client_key=%s" % self.mtls_client_key)
+            # MANDATORY
             elif not os.path.isfile(self.mtls_client_crt):
                 e = Exception("MTLS_FAILED (not isfile), mtls_client_crt=%s" % self.mtls_client_crt)
 
