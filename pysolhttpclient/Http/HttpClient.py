@@ -157,6 +157,10 @@ class HttpClient(object):
         # PROXY
         is_proxy = http_request.http_proxy_host is not None
 
+        # IF MTLS is on, we need https
+        if is_mtls and not is_https:
+            raise Exception("Cannot process, mtls ON, https OFF")
+
         # --------------------------
         # HANDLE PROXY OFF + MTLS OFF
         if not is_proxy and not is_mtls:
