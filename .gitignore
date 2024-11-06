@@ -10,3 +10,6 @@
 /pysolhttpclient.egg-info/requires.txt
 /pysolhttpclient.egg-info/SOURCES.txt
 /pysolhttpclient.egg-info/top_level.txt
+/pysolhttpclient.egg-info/
+/build/
+/.tox/

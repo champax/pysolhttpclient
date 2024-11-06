@@ -145,23 +145,62 @@ class HttpClient(object):
         :rtype urllib3.poolmanager.ProxyManager
         """
 
-        if not http_request.http_proxy_host:
-            SolBase.sleep(0)
-            if http_request.https_insecure and http_request.uri.startswith("https"):
+        # --------------------------
+        # DETECT
+
+        # HTTPS
+        is_https = http_request.uri.startswith("https")
+
+        # MTLS
+        is_mtls = http_request.mtls_enabled
+
+        # PROXY
+        is_proxy = http_request.http_proxy_host is not None
+
+        # IF MTLS is on, we need https
+        if is_mtls and not is_https:
+            raise Exception("Cannot process, mtls ON, https OFF")
+
+        # --------------------------
+        # HANDLE PROXY OFF + MTLS OFF
+        if not is_proxy and not is_mtls:
+            if http_request.https_insecure and is_https:
+                # PROXY OFF + MTLS OFF, HTTPS INSECURE
                 return self._u3_basic_pool_https_assert_off
             else:
+                # PROXY OFF + MTLS OFF, HTTPS SECURE OR HTTP
                 return self._u3_basic_pool_assert_on
 
-        # Compute key
-        is_https = http_request.uri.startswith("https")
-        key = "{0}#{1}#{2}#{3}".format(
-            http_request.http_proxy_host,
-            http_request.http_proxy_port,
-            http_request.https_insecure,
-            is_https,
-        )
+        # --------------------------
+        # HERE, PROXY AND/OR MTLS
 
-        # Check
+        # GET POOL KEY
+        if is_proxy and not is_mtls:
+            # PROXY ON, MTLS OFF
+            key = "P_{0}#{1}#{2}#{3}".format(
+                http_request.http_proxy_host,
+                http_request.http_proxy_port,
+                http_request.https_insecure,
+                is_https,
+            )
+        elif not is_proxy and is_mtls:
+            # PROXY OFF, MTLS ON
+            key = "M_{0}#{1}#{2}".format(
+                http_request.https_insecure,
+                is_https,
+                http_request.mtls_pool_key_get(),
+            )
+        else:
+            # PROXY ON, MTLS ON
+            key = "PM_{0}#{1}#{2}#{3}#{4}".format(
+                http_request.http_proxy_host,
+                http_request.http_proxy_port,
+                http_request.https_insecure,
+                is_https,
+                http_request.mtls_pool_key_get(),
+            )
+
+        # TRY FROM CACHE
         if key in self._u3_proxy_pool:
             SolBase.sleep(0)
             return self._u3_proxy_pool[key]
@@ -176,16 +215,59 @@ class HttpClient(object):
 
             # Uri
             # noinspection HttpUrlsUsage
-            proxy_url = "http://{0}:{1}".format(
-                http_request.http_proxy_host,
-                http_request.http_proxy_port)
+            if is_proxy:
+                # noinspection HttpUrlsUsage
+                proxy_url = "http://{0}:{1}".format(
+                    http_request.http_proxy_host,
+                    http_request.http_proxy_port)
 
             # Ok, allocate
             # Force underlying fifo queue to 1024 via maxsize
-            if http_request.https_insecure and is_https:
-                p = ProxyManager(num_pools=1024, maxsize=1024, proxy_url=proxy_url, assert_hostname=False)
+            if is_https:
+                if is_mtls:
+                    if is_proxy:
+                        # HTTPS ON + MTLS ON + PROXY ON
+                        p = ProxyManager(
+                            num_pools=1024, maxsize=1024, proxy_url=proxy_url,
+                            assert_hostname=False if http_request.https_insecure else True,
+                            key_file=http_request.mtls_client_key,
+                            cert_file=http_request.mtls_client_crt,
+                            key_password=http_request.mtls_client_pwd,
+                            ca_certs=http_request.mtls_ca_crt,
+                        )
+                    else:
+                        # HTTPS ON + MTLS ON + PROXY OFF
+                        p = PoolManager(
+                            num_pools=1024, maxsize=1024,
+                            assert_hostname=False if http_request.https_insecure else True,
+                            key_file=http_request.mtls_client_key,
+                            cert_file=http_request.mtls_client_crt,
+                            key_password=http_request.mtls_client_pwd,
+                            ca_certs=http_request.mtls_ca_crt,
+                        )
+                else:
+                    if is_proxy:
+                        # HTTPS ON + MTLS OFF + PROXY ON
+                        p = ProxyManager(
+                            num_pools=1024, maxsize=1024, proxy_url=proxy_url,
+                            assert_hostname=False if http_request.https_insecure else True
+                        )
+                    else:
+                        # HTTPS ON + MTLS OFF + PROXY OFF
+                        p = PoolManager(
+                            num_pools=1024, maxsize=1024,
+                            assert_hostname=False if http_request.https_insecure else True
+                        )
             else:
-                p = ProxyManager(num_pools=1024, maxsize=1024, proxy_url=proxy_url)
+                # HTTPS OFF (cannot have MTLS ON)
+                if is_proxy:
+                    # HTTPS OFF + PROXY ON
+                    p = ProxyManager(num_pools=1024, maxsize=1024, proxy_url=proxy_url)
+                else:
+                    # HTTPS OFF + PROXY OFF
+                    p = PoolManager(num_pools=1024, maxsize=1024)
+
+            # STORE IN CACHE
             self._u3_proxy_pool[key] = p
             logger.info("Started new pool for key=%s", key)
             SolBase.sleep(0)
@@ -242,12 +324,14 @@ class HttpClient(object):
         """
 
         try:
-            # Default to gevent
+            # Default to urllib3
             impl = http_request.force_http_implementation
             if impl == HttpClient.HTTP_IMPL_AUTO:
-                # Fallback gevent (urllib3 issue with latest uwsgi, gevent 1.1.1)
+                # Fallback urllib3 as default
                 impl = HttpClient.HTTP_IMPL_URLLIB3
-                # impl = HttpClient.HTTP_IMPL_GEVENT
+
+            # Validate MTLS
+            http_request.mtls_status_validate()
 
             # Uri
             url = URL(http_request.uri)
@@ -255,9 +339,8 @@ class HttpClient(object):
 
             # If proxy and https => urllib3
             if http_request.http_proxy_host and url.scheme == PROTO_HTTPS:
-                # Fallback gevent (urllib3 issue with latest uwsgi, gevent 1.1.1)
+                # Proxy via urllib3
                 impl = HttpClient.HTTP_IMPL_URLLIB3
-                # impl = HttpClient.HTTP_IMPL_GEVENT
 
             # Log
             logger.debug("Http using impl=%s", impl)
@@ -291,6 +374,9 @@ class HttpClient(object):
         :param v: str
         """
 
+        if isinstance(k, str):
+            k = k.lower()
+
         if k not in d:
             d[k] = v
         else:
@@ -305,6 +391,17 @@ class HttpClient(object):
     # ====================================
     # GEVENT
     # ====================================
+    @classmethod
+    def _gevent_check_chunked(cls, http_request):
+        """
+        Check chunked stuff
+        :param http_request: HttpRequest
+        :type http_request: HttpRequest
+        """
+        if http_request.chunked:
+            # Chunked is NOT supported for geventhttpclient
+            # REF : https://github.com/geventhttpclient/geventhttpclient/issues/158
+            raise Exception("Chunked not supported for geventhttpclient, req=%s" % http_request)
 
     def _go_gevent(self, http_request, http_response):
         """
@@ -337,6 +434,7 @@ class HttpClient(object):
             # ----------------
             if http_request.post_data:
                 # Post
+                self._gevent_check_chunked(http_request=http_request)
                 response = http.post(url.request_uri,
                                      body=http_request.post_data,
                                      headers=http_request.headers)
@@ -352,6 +450,7 @@ class HttpClient(object):
                 # With post datas (optional)
                 # Get may be called with post buffer (RFC allowed)
                 if http_request.post_data:
+                    self._gevent_check_chunked(http_request=http_request)
                     response = http.request(METHOD_GET,
                                             url.request_uri,
                                             body=http_request.post_data,
@@ -361,6 +460,7 @@ class HttpClient(object):
                                         headers=http_request.headers)
             elif http_request.method == "DELETE":
                 # With post datas
+                self._gevent_check_chunked(http_request=http_request)
                 response = http.delete(url.request_uri,
                                        body=http_request.post_data,
                                        headers=http_request.headers)
@@ -374,21 +474,25 @@ class HttpClient(object):
                                         headers=http_request.headers)
             elif http_request.method == "PUT":
                 # With post datas
+                self._gevent_check_chunked(http_request=http_request)
                 response = http.put(url.request_uri,
                                     body=http_request.post_data,
                                     headers=http_request.headers)
             elif http_request.method == "POST":
                 # With post datas
+                self._gevent_check_chunked(http_request=http_request)
                 response = http.post(url.request_uri,
                                      body=http_request.post_data,
                                      headers=http_request.headers)
             elif http_request.method == "PATCH":
                 # With post datas
+                self._gevent_check_chunked(http_request=http_request)
                 response = http.patch(url.request_uri,
                                       body=http_request.post_data,
                                       headers=http_request.headers)
             elif http_request.method == "TRACE":
                 # With post datas
+                self._gevent_check_chunked(http_request=http_request)
                 response = http.trace(url.request_uri,
                                       body=http_request.post_data,
                                       headers=http_request.headers)
@@ -445,20 +549,16 @@ class HttpClient(object):
         http_response.http_implementation = HttpClient.HTTP_IMPL_URLLIB3
 
         # Get pool
-        logger.debug("From pool")
         cur_pool = self.urllib3_from_pool(http_request)
-        logger.debug("From pool ok")
         SolBase.sleep(0)
 
         # From pool
-        logger.debug("From pool2")
         if http_request.http_proxy_host:
             # ProxyManager : direct
             conn = cur_pool
         else:
             # Get connection from basic pool
             conn = cur_pool.connection_from_url(http_request.uri)
-        logger.debug("From pool2 ok")
         SolBase.sleep(0)
 
         # Retries
@@ -482,6 +582,7 @@ class HttpClient(object):
                     headers=http_request.headers,
                     redirect=False,
                     retries=retries,
+                    chunked=http_request.chunked,
                 )
             else:
                 r = conn.urlopen(
@@ -513,6 +614,7 @@ class HttpClient(object):
                     headers=http_request.headers,
                     redirect=False,
                     retries=retries,
+                    chunked=http_request.chunked,
                 )
             else:
                 raise Exception("Invalid urllib3 method={0}".format(http_request.method))

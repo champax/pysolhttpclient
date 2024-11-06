@@ -1,0 +1,45 @@
+-----------------------------
+REF
+https://stackoverflow.com/questions/45628601/client-authentication-using-self-signed-ssl-certificate-for-nginx
+
+-----------------------------
+CA GEN
+openssl genpkey -algorithm RSA -out ./ca.key
+openssl req -new -x509 -key ./ca.key -out ./ca.crt -days 3600
+openssl x509 -in ca.crt -out ca.pem -outform PEM
+
+-----------------------------
+SERVER GEN (CRT and PEM)
+openssl genpkey -algorithm RSA -out ./server.key
+openssl req -new -key ./server.key -out ./server.csr
+openssl x509 -req -in ./server.csr -CA ./ca.crt -CAkey ./ca.key -CAcreateserial -out ./server.crt  -days 3600
+openssl x509 -in server.crt -out server.pem -outform PEM
+
+-----------------------------
+CLIENT GEN (CRT and PEM)
+=> CAUTION, ORGANISATION MUST NOT BE THE SAME AS SERVER
+openssl genrsa -des3 -out client.key 4096
+openssl req -new -key client.key -out client.csr
+openssl x509 -req -days 365 -in client.csr -CA ca.crt -CAkey ca.key -set_serial 01 -out client.crt -days 3600
+openssl x509 -in client.crt -out client.pem -outform PEM
+
+-----------------------------
+VERIFY
+openssl verify -verbose -CAfile ca.crt client.crt
+
+-----------------------------
+NGINX
+mkdir /opt/nginx_files
+cp /home/champax/_devs/_devs_private/pysolhttpclient/z_mtls/index.html /opt/nginx_files
+chown www-data -R /opt/nginx_files
+
+cp /home/champax/_devs/_devs_private/pysolhttpclient/z_mtls/mtls.conf /etc/nginx/sites-enabled/
+service nginx restart
+
+-----------------------------
+CURL WITH MTLS
+curl --cert /home/champax/_devs/_devs_private/pysolhttpclient/z_mtls/client.crt --key /home/champax/_devs/_devs_private/pysolhttpclient/z_mtls/client.key --cacert /home/champax/_devs/_devs_private/pysolhttpclient/z_mtls/ca.crt "https://127.0.0.1:7943" -v -k --pass zzzz
+
+-----------------------------
+CURL WITHOUT MTLS
+curl "https://127.0.0.1:7943/index.html" -v -k
