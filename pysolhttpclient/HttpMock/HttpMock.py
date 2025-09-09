@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # ===============================================================================
 #
-# Copyright (C) 2013/2017 Laurent Labatut / Laurent Champagnac
+# Copyright (C) 2013/2025 Laurent Labatut / Laurent Champagnac
 #
 #
 #
@@ -26,8 +26,6 @@ import logging
 from threading import Lock
 
 import gevent
-# noinspection PyProtectedMember
-from gevent.baseserver import _parse_address
 from gevent.event import Event
 from gevent.pywsgi import WSGIServer
 from pysolbase.SolBase import SolBase
@@ -171,7 +169,7 @@ class HttpMock(object):
             logger.info("Allocating WSGIServer")
             self._wsgi_server = WSGIServer(listener=('localhost', 7900), application=self.on_request)
 
-            logger.info("Starting, %s, %s", self._wsgi_server.address, _parse_address(self._wsgi_server.address))
+            logger.info("Starting, %s", self._wsgi_server.address)
             SolBase.sleep(0)
 
             # Signal
@@ -379,7 +377,7 @@ class HttpMock(object):
         logger.debug("reply set")
         status = "200 OK"
         if from_method == "HEAD":
-            # No body
+            # We sent empty body in output
             body = ""
             headers = [('Content-Type', 'text/txt')]
             start_response(status, headers)
