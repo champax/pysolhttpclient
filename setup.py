@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # ===============================================================================
 #
-# Copyright (C) 2013/2017 Laurent Labatut / Laurent Champagnac
+# Copyright (C) 2013/2025 Laurent Labatut / Laurent Champagnac
 #
 #
 #
@@ -21,10 +21,9 @@
 # Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 # ===============================================================================
 """
-from distutils.core import setup
 
 import re
-from setuptools import find_packages
+from setuptools import find_packages, setup
 
 
 def requirement_read(req_file):
@@ -67,8 +66,8 @@ def requirement_read(req_file):
 p_name = "pysolhttpclient"
 p_author = "Laurent Champagnac"
 p_email = "champagnac.laurent@gmail.com"
-p_url = "https://knock.center"
-p_version = "3.11.1"
+p_url = "https://github.com/champax/pysolhttpclient"
+p_version = "3.13.1"
 
 # Load
 req_list, dep_list = requirement_read("requirements.txt")

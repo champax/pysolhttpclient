@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # ===============================================================================
 #
-# Copyright (C) 2013/2017 Laurent Labatut / Laurent Champagnac
+# Copyright (C) 2013/2025 Laurent Labatut / Laurent Champagnac
 #
 #
 #
@@ -52,6 +52,7 @@ class NonCsDict(dict):
         return super(NonCsDict, self).__delitem__(self._to_lower(key))
 
     def __contains__(self, key):
+        # noinspection PyTypeChecker
         return super(NonCsDict, self).__contains__(self._to_lower(key))
 
     def pop(self, key, *args, **kwargs):
@@ -61,6 +62,7 @@ class NonCsDict(dict):
         return super(NonCsDict, self).get(self._to_lower(key), *args, **kwargs)
 
     def setdefault(self, key, *args, **kwargs):
+        # noinspection PyArgumentList
         return super(NonCsDict, self).setdefault(self._to_lower(key), *args, **kwargs)
 
     def copy(self):

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 # ===============================================================================
 #
-# Copyright (C) 2013/2017 Laurent Labatut / Laurent Champagnac
+# Copyright (C) 2013/2025 Laurent Labatut / Laurent Champagnac
 #
 #
 #
@@ -24,10 +24,10 @@
 
 import logging
 from ssl import CERT_NONE
+from threading import Lock
 
 import gevent
 import urllib3
-from gevent.threading import Lock
 from gevent.timeout import Timeout
 from geventhttpclient.client import PROTO_HTTPS, HTTPClient, METHOD_GET
 from geventhttpclient.url import URL
