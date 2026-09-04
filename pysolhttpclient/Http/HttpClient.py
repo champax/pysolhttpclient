@@ -42,6 +42,26 @@ logger = logging.getLogger(__name__)
 urllib3.disable_warnings()
 
 
+# Monkeypatch geventhttpclient's SSL context initializer to properly handle insecure=True (disabling cert verification).
+# In newer geventhttpclient versions, insecure=True only sets check_hostname=False, but leaves verify_mode=CERT_REQUIRED.
+try:
+    import geventhttpclient.connectionpool
+    import gevent.ssl
+
+    _orig_init_ssl_context = geventhttpclient.connectionpool.init_ssl_context
+
+    def _patched_init_ssl_context(ssl_context_factory, ca_certs, check_hostname=True, ssl_options=None):
+        context = _orig_init_ssl_context(ssl_context_factory, ca_certs, check_hostname, ssl_options)
+        # If hostname checking is disabled (insecure=True), also disable certificate verification
+        if not check_hostname:
+            context.verify_mode = gevent.ssl.CERT_NONE
+        return context
+
+    geventhttpclient.connectionpool.init_ssl_context = _patched_init_ssl_context
+except (ImportError, AttributeError):
+    pass
+
+
 class HttpClient(object):
     """
     Http client
