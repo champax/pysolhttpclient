@@ -517,3 +517,50 @@ class TestHttpClientUsingHttpMock(unittest.TestCase):
         self.assertFalse(self.h._is_running)
         self.assertIsNone(self.h._wsgi_server)
         self.assertIsNone(self.h._server_greenlet)
+
+    def test_get_basic_https_insecure_gevent(self):
+        """
+        Test that gevent http implementation with insecure=True bypasses untrusted/self-signed SSL certificates.
+        """
+        from gevent.pywsgi import WSGIServer
+        import gevent
+
+        current_dir = dirname(abspath(__file__)) + SolBase.get_pathseparator()
+        mtls_dir = current_dir + "../z_mtls/"
+        s_server_crt = mtls_dir + "server.crt"
+        s_server_key = mtls_dir + "server.key"
+
+        self.assertTrue(os.path.isfile(s_server_crt))
+        self.assertTrue(os.path.isfile(s_server_key))
+
+        def app(environ, start_response):
+            start_response('200 OK', [('Content-Type', 'text/plain')])
+            return [b"HTTPS_INSECURE_OK"]
+
+        # Start an SSL WSGIServer on a distinct port (7905)
+        server = WSGIServer(
+            listener=('localhost', 7905),
+            application=app,
+            keyfile=s_server_key,
+            certfile=s_server_crt
+        )
+        server_greenlet = gevent.spawn(server.serve_forever)
+        SolBase.sleep(250)
+
+        try:
+            hc = HttpClient()
+            hreq = HttpRequest()
+            hreq.force_http_implementation = HttpClient.HTTP_IMPL_GEVENT
+            hreq.uri = "https://localhost:7905/"
+            hreq.https_insecure = True
+
+            hresp = hc.go_http(hreq)
+
+            self.assertIsNotNone(hresp)
+            self.assertIsNone(hresp.exception)
+            self.assertEqual(hresp.status_code, 200)
+            self.assertEqual(hresp.buffer.decode("utf-8"), "HTTPS_INSECURE_OK")
+        finally:
+            server.stop()
+            server_greenlet.kill()
+
