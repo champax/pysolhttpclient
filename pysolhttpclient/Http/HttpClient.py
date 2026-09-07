@@ -48,18 +48,35 @@ try:
     import geventhttpclient.connectionpool
     import gevent.ssl
 
-    _orig_init_ssl_context = geventhttpclient.connectionpool.init_ssl_context
+    # Patch for newer geventhttpclient versions (module-level init_ssl_context)
+    if hasattr(geventhttpclient.connectionpool, "init_ssl_context"):
+        _orig_init_ssl_context = geventhttpclient.connectionpool.init_ssl_context
 
-    def _patched_init_ssl_context(ssl_context_factory, ca_certs, check_hostname=True, ssl_options=None):
-        context = _orig_init_ssl_context(ssl_context_factory, ca_certs, check_hostname, ssl_options)
-        # If hostname checking is disabled (insecure=True), also disable certificate verification
-        if not check_hostname:
-            context.verify_mode = gevent.ssl.CERT_NONE
-        return context
+        def _patched_init_ssl_context(ssl_context_factory, ca_certs, check_hostname=True, ssl_options=None):
+            context = _orig_init_ssl_context(ssl_context_factory, ca_certs, check_hostname, ssl_options)
+            # If hostname checking is disabled (insecure=True), also disable certificate verification
+            if not check_hostname:
+                context.verify_mode = gevent.ssl.CERT_NONE
+            return context
 
-    geventhttpclient.connectionpool.init_ssl_context = _patched_init_ssl_context
-except (ImportError, AttributeError):
-    pass
+        geventhttpclient.connectionpool.init_ssl_context = _patched_init_ssl_context
+
+    # Patch for older geventhttpclient versions (class-level SSLConnectionPool.init_ssl_context)
+    if hasattr(geventhttpclient.connectionpool, "SSLConnectionPool") and hasattr(
+        geventhttpclient.connectionpool.SSLConnectionPool, "init_ssl_context"
+    ):
+        _orig_class_init_ssl_context = geventhttpclient.connectionpool.SSLConnectionPool.init_ssl_context
+
+        def _patched_class_init_ssl_context(self, ssl_context_factory):
+            _orig_class_init_ssl_context(self, ssl_context_factory)
+            # If hostname checking is disabled (insecure=True), also disable certificate verification
+            if self.insecure:
+                self.ssl_context.verify_mode = gevent.ssl.CERT_NONE
+
+        geventhttpclient.connectionpool.SSLConnectionPool.init_ssl_context = _patched_class_init_ssl_context
+
+except (ImportError, AttributeError) as e:
+    logger.warning("Failed to load module or attribute: %s", e)
 
 
 class HttpClient(object):

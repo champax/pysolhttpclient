@@ -23,7 +23,7 @@ mypkg = [
 [project]
 name = "pysolhttpclient"
 description = "pysolhttpclient"
-version = "3.13.6"
+version = "3.13.7"
 requires-python = ">= 3.7"
 dynamic = ["dependencies", "optional-dependencies"]
 readme = "README.md"
